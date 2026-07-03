@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>教室管理 - Scrum Board</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <div id="app">
+        <header>
+            <h1>教室管理</h1>
+            <a href="../index.html" class="back-link">← 戻る</a>
+        </header>
+
+        <section class="form-section">
+            <h2 id="form-title">新規登録</h2>
+            <form id="classroom-form">
+                <input type="hidden" id="classroom-id">
+                <div class="form-group">
+                    <label for="name">教室名 <span class="required">*</span></label>
+                    <input type="text" id="name" required placeholder="例: 101教室">
+                </div>
+                <div class="form-group">
+                    <label for="capacity">収容人数</label>
+                    <input type="number" id="capacity" placeholder="例: 40">
+                </div>
+                <div class="form-group">
+                    <label for="floor">階数</label>
+                    <input type="number" id="floor" placeholder="例: 1">
+                </div>
+                <div class="form-group">
+                    <label for="priority_department">優先所属</label>
+                    <input type="text" id="priority_department" placeholder="例: 情報工学科">
+                </div>
+                <div class="form-actions">
+                    <button type="submit" id="submit-btn">登録</button>
+                    <button type="button" id="cancel-btn" style="display:none;" onclick="resetForm()">キャンセル</button>
+                </div>
+                <p id="form-error" class="error-message" style="display:none;"></p>
+            </form>
+        </section>
+
+        <section class="list-section">
+            <h2>教室一覧</h2>
+            <div id="loading">読み込み中...</div>
+            <table id="classroom-table" style="display:none;">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>教室名</th>
+                        <th>収容人数</th>
+                        <th>階数</th>
+                        <th>優先所属</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="classroom-list"></tbody>
+            </table>
+            <p id="no-data" style="display:none;">教室が登録されていません。</p>
+        </section>
+    </div>
+
+    <script src="../js/classrooms.js"></script>
+</body>
+</html>

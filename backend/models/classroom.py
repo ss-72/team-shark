@@ -6,10 +6,14 @@ class Classroom(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50), nullable=False, unique=True)
     capacity = db.Column(db.Integer, nullable=True)
+    floor = db.Column(db.Integer, nullable=True)
+    priority_department = db.Column(db.String(100), nullable=True)
 
     def to_dict(self):
         return {
             "id": self.id,
             "name": self.name,
-            "capacity": self.capacity
+            "capacity": self.capacity,
+            "floor": self.floor,
+            "priority_department": self.priority_department,
         }

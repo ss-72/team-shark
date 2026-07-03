@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>時間枠管理 - Scrum Board</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <div id="app">
+        <header>
+            <h1>時間枠管理</h1>
+            <a href="../index.html" class="back-link">← 戻る</a>
+        </header>
+
+        <section class="form-section">
+            <h2 id="form-title">新規登録</h2>
+            <form id="timeslot-form">
+                <input type="hidden" id="timeslot-id">
+                <div class="form-group">
+                    <label for="period">時限 <span class="required">*</span></label>
+                    <input type="number" id="period" required placeholder="例: 1" min="1">
+                </div>
+                <div class="form-group">
+                    <label for="floor">フロア</label>
+                    <input type="number" id="floor" placeholder="例: 3">
+                </div>
+                <div class="form-group">
+                    <label for="start_time">開始時間 <span class="required">*</span></label>
+                    <input type="text" id="start_time" required placeholder="例: 09:00" pattern="\d{2}:\d{2}">
+                </div>
+                <div class="form-group">
+                    <label for="end_time">終了時間 <span class="required">*</span></label>
+                    <input type="text" id="end_time" required placeholder="例: 10:30" pattern="\d{2}:\d{2}">
+                </div>
+                <div class="form-actions">
+                    <button type="submit" id="submit-btn">登録</button>
+                    <button type="button" id="cancel-btn" style="display:none;" onclick="resetForm()">キャンセル</button>
+                </div>
+                <p id="form-error" class="error-message" style="display:none;"></p>
+            </form>
+        </section>
+
+        <section class="list-section">
+            <h2>時間枠一覧</h2>
+            <div id="loading">読み込み中...</div>
+            <table id="timeslot-table" style="display:none;">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>時限</th>
+                        <th>フロア</th>
+                        <th>開始時間</th>
+                        <th>終了時間</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="timeslot-list"></tbody>
+            </table>
+            <p id="no-data" style="display:none;">時間枠が登録されていません。</p>
+        </section>
+    </div>
+
+    <script src="../js/time_slots.js"></script>
+</body>
+</html>

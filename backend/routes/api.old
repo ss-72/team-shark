@@ -1,0 +1,109 @@
+# backend/routes/api.py
+from flask import Blueprint, request, jsonify
+from database import db
+from models.teacher import Teacher
+from models.classroom import Classroom
+from models.timetable import Timetable
+
+api_bp = Blueprint('api', __name__)
+
+# ==========================================
+# 1. 教員 (Teacher) エンドポイント
+# ==========================================
+@api_bp.route('/teachers', methods=['GET'])
+def get_teachers():
+    teachers = Teacher.query.all()
+    return jsonify([t.to_dict() for t in teachers]), 200
+
+@api_bp.route('/teachers', methods=['POST'])
+def create_teacher():
+    data = request.get_json()
+    if not data or 'name' not in data:
+        return jsonify({"error": "教員名 (name) は必須です"}), 400
+    
+    new_teacher = Teacher(name=data['name'], subject=data.get('subject'))
+    db.session.add(new_teacher)
+    db.session.commit()
+    return jsonify(new_teacher.to_dict()), 201
+
+@api_bp.route('/teachers/<int:id>', methods=['DELETE'])
+def delete_teacher(id):
+    teacher = Teacher.query.get(id)
+    if not teacher:
+        return jsonify({"error": "該当する教員が見つかりません"}), 404
+    
+    db.session.delete(teacher)
+    db.session.commit()
+    return jsonify({"message": f"教員ID {id} を削除しました"}), 200
+
+
+# ==========================================
+# 2. 教室 (Classroom) エンドポイント
+# ==========================================
+@api_bp.route('/classrooms', methods=['GET'])
+def get_classrooms():
+    classrooms = Classroom.query.all()
+    return jsonify([c.to_dict() for c in classrooms]), 200
+
+@api_bp.route('/classrooms', methods=['POST'])
+def create_classroom():
+    data = request.get_json()
+    if not data or 'name' not in data:
+        return jsonify({"error": "教室名 (name) は必須です"}), 400
+    
+    new_classroom = Classroom(name=data['name'], capacity=data.get('capacity'))
+    db.session.add(new_classroom)
+    db.session.commit()
+    return jsonify(new_classroom.to_dict()), 201
+
+@api_bp.route('/classrooms/<int:id>', methods=['DELETE'])
+def delete_classroom(id):
+    classroom = Classroom.query.get(id)
+    if not classroom:
+        return jsonify({"error": "該当する教室が見つかりません"}), 404
+    
+    db.session.delete(classroom)
+    db.session.commit()
+    return jsonify({"message": f"教室ID {id} を削除しました"}), 200
+
+
+# ==========================================
+# 3. 時間割 (Timetable) エンドポイント
+# ==========================================
+@api_bp.route('/timetables', methods=['GET'])
+def get_timetables():
+    timetables = Timetable.query.all()
+    return jsonify([t.to_dict() for t in timetables]), 200
+
+@api_bp.route('/timetables', methods=['POST'])
+def create_timetable():
+    data = request.get_json()
+    required_fields = ['day_of_week', 'period', 'teacher_id', 'classroom_id']
+    if not all(field in data for field in required_fields):
+        return jsonify({"error": f"必須データが不足しています。必要: {required_fields}"}), 400
+    
+    # 外部キーとなるIDが存在するか簡易チェック
+    teacher_exists = Teacher.query.get(data['teacher_id'])
+    classroom_exists = Classroom.query.get(data['classroom_id'])
+    if not teacher_exists or not classroom_exists:
+        return jsonify({"error": "指定された教員IDまたは教室IDが存在しません"}), 400
+
+    new_timetable = Timetable(
+        day_of_week=data['day_of_week'],
+        period=data['period'],
+        teacher_id=data['teacher_id'],
+        classroom_id=data['classroom_id']
+    )
+    db.session.add(new_timetable)
+    db.session.commit()
+    return jsonify(new_timetable.to_dict()), 201
+
+@api_bp.route('/timetables/<int:id>', methods=['DELETE'])
+def delete_timetable(id):
+    timetable = Timetable.query.get(id)
+    if not timetable:
+        return jsonify({"error": "該当する時間割が見つかりません"}), 404
+    
+    db.session.delete(timetable)
+    db.session.commit()
+    return jsonify({"message": f"時間割ID {id} を削除しました"}), 200
