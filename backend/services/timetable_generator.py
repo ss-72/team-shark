@@ -13,7 +13,7 @@ def generate_timetable():
     Timetable.query.delete()
     
     # 2. 教員一覧を取得（常勤→非常勤の順でソート）
-    teachers = Teacher.query.order_by(Teacher.employment_type.desc()).all()
+    teachers = Teacher.query.order_by(Teacher.employment_type.asc()).all()
     
     # 3. 教室一覧を取得
     classrooms = Classroom.query.all()
@@ -56,4 +56,35 @@ def generate_timetable():
                         break
     
     db.session.commit()
+
+    _mark_online_evenly(created)
+    
     return created
+
+
+def _mark_online_evenly(timetables):
+    """
+    時間割の中から、できるだけ均等にオンライン授業を割り当てる。
+    例えば、5日×5限の25枠のうち、5枠をオンラインにする場合、
+    各日1枠ずつオンラインにするようにする。
+    """
+    total_slots = len(timetables)
+    online_count = max(1, total_slots // 5)  # 最低でも1枠はオンラインにする
+    
+    # 日ごとにグループ化
+    day_groups = {day: [] for day in DAYS}
+    for tt in timetables:
+        day_groups[tt.day_of_week].append(tt)
+    
+    # 各日ごとにオンライン授業を割り当てる
+    for day, slots in day_groups.items():
+        if not slots:
+            continue
+        step = max(1, len(slots) // online_count)
+        for i in range(0, len(slots), step):
+            if online_count <= 0:
+                break
+            slots[i].is_online = True
+            online_count -= 1
+    
+    db.session.commit()

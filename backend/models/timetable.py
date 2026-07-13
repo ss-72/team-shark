@@ -11,6 +11,7 @@ class Timetable(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     day_of_week = db.Column(db.String(10), nullable=False) # 'Monday', 'Tuesday' など
     period = db.Column(db.Integer, nullable=False)          # 1限, 2限 など
+    is_online = db.Column(db.Boolean, default=False) 
     
     # 外部キーの設定
     teacher_id = db.Column(db.Integer, db.ForeignKey('teachers.id'), nullable=False)
@@ -27,6 +28,7 @@ class Timetable(db.Model):
             "period": self.period,
             "teacher_id": self.teacher_id,
             "classroom_id": self.classroom_id,
+            "is_online": self.is_online,
             "teacher_name": self.teacher.name if self.teacher else None,
             "classroom_name": self.classroom.name if self.classroom else None
         }
