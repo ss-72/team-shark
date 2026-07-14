@@ -47,3 +47,4 @@ yarn-error.log
 # AWS
 .aws/credentials
 .aws/config
+backend/instance/school_db.sqlite
