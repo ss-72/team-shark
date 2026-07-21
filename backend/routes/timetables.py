@@ -52,7 +52,8 @@ def create_timetable():
         day_of_week=data['day_of_week'],
         period=period,
         teacher_id=teacher_id,
-        classroom_id=classroom_id
+        classroom_id=classroom_id,
+        is_online=data.get('is_online', False)
     )
     db.session.add(timetable)
     try:
@@ -67,7 +68,7 @@ def auto_generate():
     try:
         created = generate_timetable()
         return jsonify({
-            "message": f"時間割を自動生成しました",
+            "message": "時間割を自動生成しました",
             "count": len(created),
             "timetables": [t.to_dict() for t in created]
         }), 201
@@ -119,6 +120,7 @@ def update_timetable(timetable_id):
     timetable.period = period
     timetable.teacher_id = teacher_id
     timetable.classroom_id = classroom_id
+    timetable.is_online = data.get('is_online', False)
 
     try:
         db.session.commit()
@@ -130,7 +132,7 @@ def update_timetable(timetable_id):
 
 @timetables_bp.route('/<int:timetable_id>', methods=['DELETE'])
 def delete_timetable(timetable_id):
-#指定した時間割 ID を削除するエンドポイント
+    #指定した時間割 ID を削除するエンドポイント
     timetable = Timetable.query.get(timetable_id)
     if not timetable:
         return jsonify({"error": "該当する時間割が見つかりません"}), 404

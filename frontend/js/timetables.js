@@ -87,6 +87,7 @@ document.getElementById('timetable-form').addEventListener('submit', async (e) =
     const period = document.getElementById('period').value;
     const teacher_id = document.getElementById('teacher_id').value;
     const classroom_id = document.getElementById('classroom_id').value;
+    const is_online = document.getElementById('is_online').checked;
 
     if (!day_of_week || !period || !teacher_id || !classroom_id) {
         showFormError('すべての必須項目を入力してください。');
@@ -98,6 +99,7 @@ document.getElementById('timetable-form').addEventListener('submit', async (e) =
         period: parseInt(period),
         teacher_id: parseInt(teacher_id),
         classroom_id: parseInt(classroom_id),
+        is_online: is_online,
     };
 
     try {
@@ -130,6 +132,7 @@ async function editTimetable(id) {
         document.getElementById('period').value = timetable.period;
         document.getElementById('teacher_id').value = timetable.teacher_id;
         document.getElementById('classroom_id').value = timetable.classroom_id;
+        document.getElementById('is_online').checked = timetable.is_online;
 
         document.getElementById('form-title').textContent = '編集';
         document.getElementById('submit-btn').textContent = '更新';
@@ -155,6 +158,7 @@ async function deleteTimetable(id) {
 function resetForm() {
     document.getElementById('timetable-form').reset();
     document.getElementById('timetable-id').value = '';
+    document.getElementById('is_online').checked = false;
     document.getElementById('form-title').textContent = '新規登録';
     document.getElementById('submit-btn').textContent = '登録';
     document.getElementById('cancel-btn').style.display = 'none';

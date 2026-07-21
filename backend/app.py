@@ -1,7 +1,10 @@
 from datetime import time
+import os
+from urllib.parse import quote_plus
 
 from flask import Flask
 from flask_cors import CORS
+from dotenv import load_dotenv
 from database import db
 
 from models.teacher import Teacher
@@ -13,11 +16,33 @@ from routes.teachers import teachers_bp
 from routes.time_slots import time_slots_bp
 from routes.timetables import timetables_bp
 
+load_dotenv()
+
+
+def _get_database_url():
+    database_url = os.getenv('DATABASE_URL')
+    if database_url:
+        return database_url
+
+    mysql_host = os.getenv('MYSQL_HOST')
+    mysql_user = os.getenv('MYSQL_USER')
+    mysql_password = os.getenv('MYSQL_PASSWORD')
+    mysql_database = os.getenv('MYSQL_DATABASE')
+
+    if mysql_host and mysql_user and mysql_password and mysql_database:
+        mysql_port = os.getenv('MYSQL_PORT', '3306')
+        return (
+            f"mysql+pymysql://{quote_plus(mysql_user)}:{quote_plus(mysql_password)}"
+            f"@{mysql_host}:{mysql_port}/{mysql_database}"
+        )
+
+    return 'sqlite:///local_dev.db'
+
 def create_app(config_override=None):
     app = Flask(__name__)
     CORS(app)
 
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://scrum_user:password123@localhost/school_db'
+    app.config['SQLALCHEMY_DATABASE_URI'] = _get_database_url()
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     if config_override:
         app.config.update(config_override)
