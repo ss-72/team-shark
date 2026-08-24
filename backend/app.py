@@ -36,7 +36,8 @@ def _get_database_url():
             f"@{mysql_host}:{mysql_port}/{mysql_database}"
         )
 
-    return 'sqlite:///local_dev.db'
+    # デフォルトはローカル開発向けのMySQL（以前のハードコード値）
+    return 'mysql+pymysql://scrum_user:password123@localhost/school_db'
 
 def create_app(config_override=None):
     app = Flask(__name__)

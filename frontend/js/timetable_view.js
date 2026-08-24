@@ -29,12 +29,12 @@ async function showWeekCalendar(filter, filterId, filterName) {
         let filtered = timetables;
         if (filter === 'teacher' && filterId) {
             filtered = timetables.filter(t => t.teacher_id === filterId);
-            label.textContent = `教員: ${escapeHtml(filterName || filterId)}`;
+            label.textContent = `表示中: 教員 ${escapeHtml(filterName || filterId)}`;
         } else if (filter === 'classroom' && filterId) {
             filtered = timetables.filter(t => t.classroom_id === filterId);
-            label.textContent = `教室: ${escapeHtml(filterName || filterId)}`;
+            label.textContent = `表示中: 教室 ${escapeHtml(filterName || filterId)}`;
         } else {
-            label.textContent = '全体表示';
+            label.textContent = '表示中: 全体';
         }
 
         // カレンダーグリッドを構築
@@ -58,8 +58,16 @@ async function showWeekCalendar(filter, filterId, filterName) {
                         <div class="entry-classroom">${escapeHtml(t.classroom_name || '教室ID:' + t.classroom_id)}</div>
                     </td>`;
                 } else {
-                    // 重複（自動生成後は発生しないはずだが念のため）
-                    html += `<td class="conflict-cell">⚠ ${entries.length}件</td>`;
+                    // 同じ曜日・時限に複数の授業が入っている場合は、警告ではなく件数と一覧を表示する
+                    html += `<td class="multi-entry-cell">
+                        <div class="multi-entry-count">${entries.length}件</div>
+                        ${entries.map(t => `
+                            <div class="multi-entry-item">
+                                <div class="entry-teacher">${escapeHtml(t.teacher_name || '教員ID:' + t.teacher_id)}</div>
+                                <div class="entry-classroom">${escapeHtml(t.classroom_name || '教室ID:' + t.classroom_id)}</div>
+                            </div>
+                        `).join('')}
+                    </td>`;
                 }
             });
             html += '</tr>';

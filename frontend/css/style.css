@@ -190,6 +190,41 @@ header {
     padding: 20px 0;
 }
 
+/* Calendar */
+.multi-entry-cell {
+    vertical-align: top;
+    padding: 8px 10px;
+}
+
+.multi-entry-count {
+    font-weight: 700;
+    font-size: 12px;
+    color: #1976d2;
+    margin-bottom: 6px;
+}
+
+.multi-entry-item {
+    margin-bottom: 6px;
+    padding: 6px 8px;
+    background: #f8fbff;
+    border: 1px solid #dbe9f7;
+    border-radius: 6px;
+}
+
+.multi-entry-item:last-child {
+    margin-bottom: 0;
+}
+
+.entry-teacher {
+    font-weight: 600;
+    font-size: 13px;
+}
+
+.entry-classroom {
+    font-size: 12px;
+    color: #666;
+}
+
 /* Home link card */
 .nav-list {
     list-style: none;

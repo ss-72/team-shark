@@ -22,42 +22,44 @@ def generate_timetable():
     classrooms = Classroom.query.all()
 
     # 4. 使用済みスロットを管理
-    used_slots = set()
+    used_teacher_slots = set()
+    used_classroom_slots = set()
 
     created = []
 
-    # 5. 教員ごとに空いている枠を探して割り当て
-    for teacher in teachers:
-        assigned = False
+    # 5. 時間帯を先に走査し、教員・教室を順番に割り当てる
+    #    これで月曜に偏りにくくし、曜日全体に分散しやすくする
+    teacher_index = 0
+    classroom_index = 0
 
-        for day in DAYS:
-            if assigned:
-                break
+    for day in DAYS:
+        for period in PERIODS:
+            if not teachers or not classrooms:
+                continue
 
-            for period in PERIODS:
-                if assigned:
-                    break
+            teacher = teachers[teacher_index % len(teachers)]
+            classroom = classrooms[classroom_index % len(classrooms)]
+            teacher_key = (day, period, teacher.id)
+            classroom_key = (day, period, classroom.id)
 
-                for classroom in classrooms:
-                    teacher_key = (day, period, teacher.id)
-                    classroom_key = (day, period, classroom.id)
+            if teacher_key in used_teacher_slots or classroom_key in used_classroom_slots:
+                continue
 
-                    if teacher_key not in used_slots and classroom_key not in used_slots:
-                        tt = Timetable(
-                            day_of_week=day,
-                            period=period,
-                            teacher_id=teacher.id,
-                            classroom_id=classroom.id
-                        )
+            tt = Timetable(
+                day_of_week=day,
+                period=period,
+                teacher_id=teacher.id,
+                classroom_id=classroom.id
+            )
 
-                        db.session.add(tt)
-                        created.append(tt)
+            db.session.add(tt)
+            created.append(tt)
 
-                        used_slots.add(teacher_key)
-                        used_slots.add(classroom_key)
+            used_teacher_slots.add(teacher_key)
+            used_classroom_slots.add(classroom_key)
 
-                        assigned = True
-                        break
+            teacher_index += 1
+            classroom_index += 1
 
     db.session.commit()
 
