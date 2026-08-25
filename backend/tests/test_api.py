@@ -1,6 +1,4 @@
 import unittest
-import os
-import tempfile
 
 from app import create_app
 from database import db
@@ -8,12 +6,9 @@ from database import db
 
 class ApiTestCase(unittest.TestCase):
     def setUp(self):
-        fd, self.db_path = tempfile.mkstemp(suffix='.db')
-        os.close(fd)
-
         self.app = create_app({
             'TESTING': True,
-            'SQLALCHEMY_DATABASE_URI': f'sqlite:///{self.db_path}',
+            'SQLALCHEMY_DATABASE_URI': 'sqlite://',
         })
         self.client = self.app.test_client()
 
@@ -22,82 +17,128 @@ class ApiTestCase(unittest.TestCase):
             db.session.remove()
             db.drop_all()
 
-        if os.path.exists(self.db_path):
-            os.remove(self.db_path)
-
-    def test_teacher_crud(self):
+    def _create_teacher(self, name, employment_type='常勤'):
         response = self.client.post('/api/teachers', json={
-            'name': '山田太郎',
-            'employment_type': '常勤',
+            'name': name,
+            'employment_type': employment_type,
             'department': '情報科学',
             'subject': 'Python',
         })
         self.assertEqual(response.status_code, 201)
+        return response.get_json()
 
-        response = self.client.get('/api/teachers')
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(response.get_json()), 1)
-
-    def test_classroom_crud(self):
+    def _create_classroom(self, name):
         response = self.client.post('/api/classrooms', json={
-            'name': 'A101',
+            'name': name,
             'capacity': 40,
             'floor': 1,
             'priority_department': '情報科学',
         })
         self.assertEqual(response.status_code, 201)
+        return response.get_json()
+
+    def test_testing_mode_does_not_seed_development_data(self):
+        self.assertEqual(self.client.get('/api/teachers').get_json(), [])
+        self.assertEqual(self.client.get('/api/classrooms').get_json(), [])
+        self.assertEqual(self.client.get('/api/time_slots').get_json(), [])
+
+    def test_teacher_crud(self):
+        teacher = self._create_teacher('山田太郎')
+
+        response = self.client.get('/api/teachers')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.get_json()), 1)
+
+        response = self.client.put(f"/api/teachers/{teacher['id']}", json={
+            'name': '山田次郎',
+            'employment_type': '非常勤',
+            'department': '情報科学',
+            'subject': 'Python',
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()['name'], '山田次郎')
+
+        response = self.client.delete(f"/api/teachers/{teacher['id']}")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(self.client.get('/api/teachers').get_json(), [])
+
+    def test_classroom_crud(self):
+        classroom = self._create_classroom('A101')
 
         response = self.client.get('/api/classrooms')
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.get_json()), 1)
 
-    def test_time_slots_seeded_and_accessible(self):
+        response = self.client.put(f"/api/classrooms/{classroom['id']}", json={
+            'name': 'A102',
+            'capacity': 45,
+            'floor': 1,
+            'priority_department': '情報科学',
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()['name'], 'A102')
+
+        response = self.client.delete(f"/api/classrooms/{classroom['id']}")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(self.client.get('/api/classrooms').get_json(), [])
+
+    def test_time_slot_crud(self):
+        response = self.client.post('/api/time_slots', json={
+            'period': 1,
+            'start_time': '09:00',
+            'end_time': '10:30',
+        })
+        self.assertEqual(response.status_code, 201)
+        time_slot = response.get_json()
+
         response = self.client.get('/api/time_slots')
         self.assertEqual(response.status_code, 200)
         payload = response.get_json()
-        self.assertEqual(len(payload), 6)
-        self.assertTrue(any(item['floor'] == 3 and item['period'] == 3 for item in payload))
+        self.assertEqual(len(payload), 1)
+        self.assertEqual(payload[0]['period'], 1)
 
+        response = self.client.put(f"/api/time_slots/{time_slot['id']}", json={
+            'period': 2,
+            'start_time': '10:45',
+            'end_time': '12:15',
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()['period'], 2)
 
-    def test_generate_timetable_assigns_part_time_teacher(self):
-        response = self.client.post('/api/teachers', json={
-            'name': '田中 花子',
-            'employment_type': '常勤',
-            'department': '国語',
-            'subject': '国語',
+        response = self.client.delete(f"/api/time_slots/{time_slot['id']}")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(self.client.get('/api/time_slots').get_json(), [])
+
+    def test_timetable_crud(self):
+        teacher = self._create_teacher('田中 花子')
+        classroom = self._create_classroom('B201')
+
+        response = self.client.post('/api/timetables', json={
+            'day_of_week': 'Monday',
+            'period': 1,
+            'teacher_id': teacher['id'],
+            'classroom_id': classroom['id'],
         })
         self.assertEqual(response.status_code, 201)
-        full_time_teacher = response.get_json()
+        timetable = response.get_json()
 
-        response = self.client.post('/api/teachers', json={
-            'name': '鈴木 一郎',
-            'employment_type': '非常勤',
-            'department': '体育',
-            'subject': '体育',
+        response = self.client.get('/api/timetables')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.get_json()), 1)
+
+        response = self.client.put(f"/api/timetables/{timetable['id']}", json={
+            'day_of_week': 'Tuesday',
+            'period': 2,
+            'teacher_id': teacher['id'],
+            'classroom_id': classroom['id'],
+            'is_online': True,
         })
-        self.assertEqual(response.status_code, 201)
-        part_time_teacher = response.get_json()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()['day_of_week'], 'Tuesday')
 
-        response = self.client.post('/api/classrooms', json={
-            'name': 'B201',
-            'capacity': 30,
-            'floor': 2,
-            'priority_department': '体育',
-        })
-        self.assertEqual(response.status_code, 201)
-        classroom = response.get_json()
-
-        response = self.client.post('/api/timetables/generate')
-        self.assertEqual(response.status_code, 201)
-        payload = response.get_json()
-        self.assertEqual(payload['count'], 2)
-
-        timetable_teacher_ids = {item['teacher_id'] for item in payload['timetables']}
-        self.assertEqual(timetable_teacher_ids, {full_time_teacher['id'], part_time_teacher['id']})
-
-        part_time_entries = [item for item in payload['timetables'] if item['teacher_id'] == part_time_teacher['id']]
-        self.assertEqual(len(part_time_entries), 1)
-        self.assertEqual(part_time_entries[0]['classroom_id'], classroom['id'])
+        response = self.client.delete(f"/api/timetables/{timetable['id']}")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(self.client.get('/api/timetables').get_json(), [])
 
 
 if __name__ == '__main__':

@@ -57,9 +57,12 @@ def create_app(config_override=None):
 
     with app.app_context():
         db.create_all()
-        _seed_time_slots()
-        _seed_teachers()
-        _seed_classrooms()
+        # Tests own their fixtures so development seed data cannot change their
+        # assumptions or collide with records created by an individual test.
+        if not app.config.get('TESTING'):
+            _seed_time_slots()
+            _seed_teachers()
+            _seed_classrooms()
 
     return app
 
