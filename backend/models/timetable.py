@@ -15,10 +15,12 @@ class Timetable(db.Model):
     
     # 外部キーの設定
     teacher_id = db.Column(db.Integer, db.ForeignKey('teachers.id'), nullable=False)
+    subject_id = db.Column(db.Integer, db.ForeignKey('subjects.id'), nullable=False)
     classroom_id = db.Column(db.Integer, db.ForeignKey('classrooms.id'), nullable=False)
 
     # モデル間のリレーションシップ（JOIN して情報を取得しやすくするための設定）
     teacher = db.relationship('Teacher', backref='timetables')
+    subject = db.relationship('Subject', backref='timetables')
     classroom = db.relationship('Classroom', backref='timetables')
 
     def to_dict(self):
@@ -27,9 +29,11 @@ class Timetable(db.Model):
             "day_of_week": self.day_of_week,
             "period": self.period,
             "teacher_id": self.teacher_id,
+            "subject_id": self.subject_id,
             "classroom_id": self.classroom_id,
             "is_online": self.is_online,
             "teacher_name": self.teacher.name if self.teacher else None,
+            "subject_name": self.subject.name if self.subject else None,
             "classroom_name": self.classroom.name if self.classroom else None
         }
 

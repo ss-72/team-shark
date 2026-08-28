@@ -12,7 +12,7 @@
 生成AIには最低限、次を読ませる。
 
 - `docs/PROJECT_PLAN.md`
-- `docs/teams/TEAM_A.md`
+- `docs/TEAM_A.md`
 - 実際に変更する周辺ソースコード
 
 `docs/archive/` は旧仕様であり、現行仕様の根拠にはしない。
@@ -409,7 +409,7 @@ GET /api/my/timetable
 あなたは「時間割・教室自動割り当てシステム」のチームA担当開発者です。
 
 最上位仕様は docs/PROJECT_PLAN.md、
-担当範囲は docs/teams/TEAM_A.md です。
+担当範囲は docs/TEAM_A.md です。
 
 最初に両方を読み、その後、担当する既存コードを確認してください。
 docs/archive/ は旧仕様なので現行仕様の根拠として使用しないでください。

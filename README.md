@@ -113,13 +113,33 @@ cd backend
 python -m unittest discover -s tests
 ```
 
+## 初期管理者アカウント（重要）
+
+本アプリケーションは起動時に初期管理者（admin）を自動で作成しますが、セキュリティ上の理由から管理者アカウントのユーザー名とパスワードは必ず環境変数で明示的に指定してください。指定がない場合、非テスト起動は例外となり起動が中止されます。
+
+必須環境変数:
+
+- `ADMIN_USERNAME` — 初期管理者のユーザー名
+- `ADMIN_PASSWORD` — 初期管理者のパスワード
+
+起動例（PowerShell）:
+
+```powershell
+$env:ADMIN_USERNAME='admin'
+$env:ADMIN_PASSWORD='secure-password'
+python backend/app.py
+```
+
+パスワードはログやリポジトリに書かないでください。運用時は安全なシークレット管理（Vault、CI/CDのシークレット、環境設定）を利用してください。
+
+
 ## DBスキーマ変更方針
 
 現在は Flask-SQLAlchemy の `db.create_all()` を使用しています。これは新規テーブルを作成できますが、既存テーブルへ安全に列を追加・変更するマイグレーションではありません。
 
 開発環境で `User`、`Subject`、`TeacherSubject`、`TeacherUnavailability`、または `Timetable.subject_id` を追加する際は、既存データを保持する必要がないことを確認した上で、開発用DBを削除してからアプリを再起動し、スキーマを作り直します。本番データや保持すべき共有データではこの方法を使わず、導入判断をしたマイグレーション手段で適用します。
 
-## チームA共通データ契約
+## プロジェクト共通データ契約
 
 後続のA-1/A-2とチームBは次の名前を共通契約として使用します。
 

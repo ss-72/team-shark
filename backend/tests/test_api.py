@@ -2,6 +2,7 @@ import unittest
 
 from app import create_app
 from database import db
+from models.user import User
 
 
 class ApiTestCase(unittest.TestCase):
@@ -11,6 +12,15 @@ class ApiTestCase(unittest.TestCase):
             'SQLALCHEMY_DATABASE_URI': 'sqlite://',
         })
         self.client = self.app.test_client()
+        with self.app.app_context():
+            admin = User(username='test-admin', role='admin')
+            admin.set_password('test-password')
+            db.session.add(admin)
+            db.session.commit()
+        response = self.client.post('/api/auth/login', json={
+            'username': 'test-admin', 'password': 'test-password',
+        })
+        self.assertEqual(response.status_code, 200)
 
     def tearDown(self):
         with self.app.app_context():
@@ -36,6 +46,20 @@ class ApiTestCase(unittest.TestCase):
         })
         self.assertEqual(response.status_code, 201)
         return response.get_json()
+
+    def _create_subject(self, name, required_periods_per_week=1):
+        response = self.client.post('/api/subjects', json={
+            'name': name,
+            'required_periods_per_week': required_periods_per_week,
+        })
+        self.assertEqual(response.status_code, 201)
+        return response.get_json()
+
+    def _assign_subject(self, teacher_id, subject_id):
+        response = self.client.post(f'/api/teachers/{teacher_id}/subjects', json={
+            'subject_id': subject_id,
+        })
+        self.assertEqual(response.status_code, 201)
 
     def test_testing_mode_does_not_seed_development_data(self):
         self.assertEqual(self.client.get('/api/teachers').get_json(), [])
@@ -112,11 +136,14 @@ class ApiTestCase(unittest.TestCase):
     def test_timetable_crud(self):
         teacher = self._create_teacher('田中 花子')
         classroom = self._create_classroom('B201')
+        subject = self._create_subject('Python')
+        self._assign_subject(teacher['id'], subject['id'])
 
         response = self.client.post('/api/timetables', json={
             'day_of_week': 'Monday',
             'period': 1,
             'teacher_id': teacher['id'],
+            'subject_id': subject['id'],
             'classroom_id': classroom['id'],
         })
         self.assertEqual(response.status_code, 201)
@@ -130,6 +157,7 @@ class ApiTestCase(unittest.TestCase):
             'day_of_week': 'Tuesday',
             'period': 2,
             'teacher_id': teacher['id'],
+            'subject_id': subject['id'],
             'classroom_id': classroom['id'],
             'is_online': True,
         })

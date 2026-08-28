@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>教員設定 - Schedule Connect</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <div id="app">
+        <header><h1 id="page-title">教員設定</h1><a href="teachers.html" class="back-link">← 教員管理へ戻る</a></header>
+        <p id="page-error" class="error-message" style="display:none"></p>
+        <section class="form-section">
+            <h2>担当可能科目</h2>
+            <form id="assignment-form"><div class="form-group"><label for="subject-id">科目</label><select id="subject-id" required></select></div><div class="form-actions"><button>追加</button></div></form>
+            <table class="data-table"><thead><tr><th>科目</th><th>操作</th></tr></thead><tbody id="assignment-list"></tbody></table>
+        </section>
+        <section class="form-section">
+            <h2>曜日・時限NG</h2>
+            <form id="unavailability-form">
+                <div class="form-group"><label for="day-of-week">曜日</label><select id="day-of-week"><option value="Monday">月曜日</option><option value="Tuesday">火曜日</option><option value="Wednesday">水曜日</option><option value="Thursday">木曜日</option><option value="Friday">金曜日</option></select></div>
+                <div class="form-group"><label for="period">時限</label><select id="period"><option value="">終日</option><option value="1">1限</option><option value="2">2限</option><option value="3">3限</option><option value="4">4限</option><option value="5">5限</option></select></div>
+                <div class="form-actions"><button>NG時間を追加</button></div>
+            </form>
+            <table class="data-table"><thead><tr><th>曜日</th><th>時限</th><th>操作</th></tr></thead><tbody id="unavailability-list"></tbody></table>
+        </section>
+    </div>
+    <script src="../js/teacher_settings.js"></script>
+</body>
+</html>

@@ -123,26 +123,36 @@ header {
     box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
-#teacher-table {
+#teacher-table,
+#subject-table,
+.data-table {
     width: 100%;
     border-collapse: collapse;
 }
 
 #teacher-table th,
-#teacher-table td {
+#teacher-table td,
+#subject-table th,
+#subject-table td,
+.data-table th,
+.data-table td {
     padding: 10px 12px;
     text-align: left;
     border-bottom: 1px solid #e0e0e0;
     font-size: 14px;
 }
 
-#teacher-table th {
+#teacher-table th,
+#subject-table th,
+.data-table th {
     background: #f5f5f5;
     font-weight: 600;
     color: #555;
 }
 
-#teacher-table tr:hover {
+#teacher-table tr:hover,
+#subject-table tr:hover,
+.data-table tr:hover {
     background: #f9f9f9;
 }
 

@@ -376,8 +376,8 @@ python -m unittest discover -s backend/tests
 詳細な担当範囲と生成AI向け指示は以下を正とする。
 
 ```text
-docs/teams/TEAM_A.md
-docs/teams/TEAM_B.md
+docs/TEAM_A.md
+docs/TEAM_B.md
 ```
 
 両チーム文書は本書を上書きする仕様書ではなく、**本書を実装するための作業指示書**である。
@@ -438,7 +438,7 @@ Git運用方法そのものはこれらの文書では規定しない。
 ## 15. 文書管理ルール
 
 - **現行仕様は `docs/PROJECT_PLAN.md` のみ更新する。**
-- `docs/teams/TEAM_A.md` と `docs/teams/TEAM_B.md` は現行仕様を実装するための担当別作業指示書として維持する。
+- `docs/TEAM_A.md` と `docs/TEAM_B.md` は現行仕様を実装するための担当別作業指示書として維持する。
 - チーム文書と本書が衝突した場合は、本書を優先してチーム文書側を修正する。
 - 過去資料は `docs/archive/` に保存する。
 - 新しい要件が出た場合、別の仕様書を増やさず本書を更新する。

@@ -20,15 +20,20 @@ async function fetchAPI(endpoint, options = {}) {
 // 教員・教室の選択肢を読み込む
 async function loadSelectOptions() {
     try {
-        const [teachers, classrooms] = await Promise.all([
+        const [teachers, subjects, classrooms] = await Promise.all([
             fetchAPI('/teachers'),
+            fetchAPI('/subjects'),
             fetchAPI('/classrooms'),
         ]);
         const teacherSelect = document.getElementById('teacher_id');
+        const subjectSelect = document.getElementById('subject_id');
         const classroomSelect = document.getElementById('classroom_id');
 
         teacherSelect.innerHTML = '<option value="">-- 選択 --</option>' +
             teachers.map(t => `<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('');
+
+        subjectSelect.innerHTML = '<option value="">-- 選択 --</option>' +
+            subjects.map(s => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('');
 
         classroomSelect.innerHTML = '<option value="">-- 選択 --</option>' +
             classrooms.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
@@ -65,6 +70,7 @@ async function loadTimetables() {
                 <td>${dayLabels[t.day_of_week] || t.day_of_week}</td>
                 <td>${t.period}</td>
                 <td>${escapeHtml(t.teacher_name || '教員ID:' + t.teacher_id)}</td>
+                <td>${escapeHtml(t.subject_name || '科目ID:' + t.subject_id)}</td>
                 <td>${escapeHtml(t.classroom_name || '教室ID:' + t.classroom_id)}</td>
                 <td class="action-btns">
                     <button onclick="editTimetable(${t.id})" class="btn-edit">編集</button>
@@ -86,10 +92,11 @@ document.getElementById('timetable-form').addEventListener('submit', async (e) =
     const day_of_week = document.getElementById('day_of_week').value;
     const period = document.getElementById('period').value;
     const teacher_id = document.getElementById('teacher_id').value;
+    const subject_id = document.getElementById('subject_id').value;
     const classroom_id = document.getElementById('classroom_id').value;
     const is_online = document.getElementById('is_online').checked;
 
-    if (!day_of_week || !period || !teacher_id || !classroom_id) {
+    if (!day_of_week || !period || !teacher_id || !subject_id || !classroom_id) {
         showFormError('すべての必須項目を入力してください。');
         return;
     }
@@ -98,6 +105,7 @@ document.getElementById('timetable-form').addEventListener('submit', async (e) =
         day_of_week,
         period: parseInt(period),
         teacher_id: parseInt(teacher_id),
+        subject_id: parseInt(subject_id),
         classroom_id: parseInt(classroom_id),
         is_online: is_online,
     };
@@ -131,6 +139,7 @@ async function editTimetable(id) {
         document.getElementById('day_of_week').value = timetable.day_of_week;
         document.getElementById('period').value = timetable.period;
         document.getElementById('teacher_id').value = timetable.teacher_id;
+        document.getElementById('subject_id').value = timetable.subject_id;
         document.getElementById('classroom_id').value = timetable.classroom_id;
         document.getElementById('is_online').checked = timetable.is_online;
 

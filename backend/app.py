@@ -6,15 +6,25 @@ from flask import Flask
 from flask_cors import CORS
 from dotenv import load_dotenv
 from database import db
+from flask import session
 
 from models.teacher import Teacher
 from models.classroom import Classroom
 from models.timetable import Timetable
 from models.time_slot import TimeSlot
+from models.user import User
+from models.subject import Subject
+from models.teacher_subject import TeacherSubject
+from models.teacher_unavailability import TeacherUnavailability
 from routes.classrooms import classrooms_bp
 from routes.teachers import teachers_bp
 from routes.time_slots import time_slots_bp
 from routes.timetables import timetables_bp
+from routes.auth import auth_bp
+from routes.users import users_bp
+from routes.subjects import subjects_bp
+from routes.teacher_subjects import teacher_subjects_bp
+from routes.teacher_unavailability import teacher_unavailability_bp
 
 load_dotenv()
 
@@ -36,24 +46,44 @@ def _get_database_url():
             f"@{mysql_host}:{mysql_port}/{mysql_database}"
         )
 
-    # デフォルトはローカル開発向けのMySQL（以前のハードコード値）
-    return 'mysql+pymysql://scrum_user:password123@localhost/school_db'
+    # 本番/運用向け: 明示的な DB 接続情報が必須
+    raise RuntimeError('DATABASE_URL or MYSQL_HOST/MYSQL_USER/MYSQL_PASSWORD/MYSQL_DATABASE must be set')
 
 def create_app(config_override=None):
     app = Flask(__name__)
     CORS(app)
 
-    app.config['SQLALCHEMY_DATABASE_URI'] = _get_database_url()
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    # Apply test overrides before consulting configuration that controls
+    # startup validation.  This keeps the production fail-closed behavior
+    # while allowing isolated test databases.
     if config_override:
         app.config.update(config_override)
 
+    app.config['SQLALCHEMY_DATABASE_URI'] = app.config.get(
+        'SQLALCHEMY_DATABASE_URI'
+    ) or _get_database_url()
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    # セッションを使うためのシークレットキー
+    # SECRET_KEY は本番で必須。テスト時はモック値を使えるようにする。
+    secret = app.config.get('SECRET_KEY') or os.getenv('SECRET_KEY')
+    if not secret and not app.config.get('TESTING'):
+        raise RuntimeError('SECRET_KEY environment variable must be set')
+    app.config['SECRET_KEY'] = secret or 'test-secret'
     db.init_app(app)
+
+    # Register global auth/session checks
+    from utils.auth import register_request_checks
+    register_request_checks(app)
 
     app.register_blueprint(teachers_bp, url_prefix='/api/teachers')
     app.register_blueprint(classrooms_bp, url_prefix='/api/classrooms')
     app.register_blueprint(time_slots_bp, url_prefix='/api/time_slots')
     app.register_blueprint(timetables_bp, url_prefix='/api/timetables')
+    app.register_blueprint(auth_bp, url_prefix='/api/auth')
+    app.register_blueprint(users_bp, url_prefix='/api/users')
+    app.register_blueprint(subjects_bp, url_prefix='/api/subjects')
+    app.register_blueprint(teacher_subjects_bp, url_prefix='/api/teacher_subjects')
+    app.register_blueprint(teacher_unavailability_bp, url_prefix='/api/teacher_unavailability')
 
     with app.app_context():
         db.create_all()
@@ -63,6 +93,7 @@ def create_app(config_override=None):
             _seed_time_slots()
             _seed_teachers()
             _seed_classrooms()
+            _seed_admin_user()
 
     return app
 
@@ -108,6 +139,25 @@ def _seed_time_slots():
         TimeSlot(period=5, floor=None, start_time=time(16, 30), end_time=time(18, 0)),
     ]
     db.session.add_all(seed_rows)
+    db.session.commit()
+
+
+def _seed_admin_user():
+    # セキュリティ強化: 管理者の初期ユーザーは必ず環境変数で指定すること。
+    # 非 TESTING モードで起動する場合、両方が未設定だと起動を中止して明示的に運用者に設定を促す。
+    username = os.getenv('ADMIN_USERNAME')
+    password = os.getenv('ADMIN_PASSWORD')
+
+    if not username or not password:
+        raise RuntimeError('Missing ADMIN_USERNAME or ADMIN_PASSWORD environment variables. Set both to seed initial admin.')
+
+    # 既に存在すれば何もしない
+    if User.query.filter_by(username=username).first():
+        return
+
+    admin = User(username=username, role='admin', is_active=True)
+    admin.set_password(password)
+    db.session.add(admin)
     db.session.commit()
 
 if __name__ == '__main__':

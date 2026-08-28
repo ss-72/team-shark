@@ -12,7 +12,7 @@
 生成AIには最低限、次を読ませる。
 
 - `docs/PROJECT_PLAN.md`
-- `docs/teams/TEAM_B.md`
+- `docs/TEAM_B.md`
 - `backend/services/timetable_generator.py`
 - 関連するmodels/routes
 - 教員向け既存フロントコード
@@ -445,7 +445,7 @@ Monday 1限 / Teacher B / Room 102
 あなたは「時間割・教室自動割り当てシステム」のチームB担当開発者です。
 
 最上位仕様は docs/PROJECT_PLAN.md、
-担当範囲は docs/teams/TEAM_B.md です。
+担当範囲は docs/TEAM_B.md です。
 
 最初に両文書と、
 backend/services/timetable_generator.py、

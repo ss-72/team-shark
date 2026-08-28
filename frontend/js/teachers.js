@@ -44,6 +44,7 @@ async function loadTeachers() {
                 <td>${escapeHtml(t.employment_type || '')}</td>
                 <td>${escapeHtml(t.department || '')}</td>
                 <td>${escapeHtml(t.subject || '')}</td>
+                <td><a class="btn-edit" href="teacher_settings.html?id=${t.id}">設定</a></td>
                 <td class="action-btns">
                     <button onclick="editTeacher(${t.id})" class="btn-edit">編集</button>
                     <button onclick="deleteTeacher(${t.id})" class="btn-delete">削除</button>
