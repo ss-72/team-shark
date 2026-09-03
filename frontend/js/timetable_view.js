@@ -79,14 +79,11 @@ async function showWeekCalendar(filter, filterId, filterName) {
         calendar.innerHTML = html;
 
         // アクティブなフィルタボタンのスタイルを更新
-        document.querySelectorAll('.btn-filter').forEach(btn => btn.classList.remove('active'));
-        if (filter === 'teacher') {
-            document.querySelector('.btn-filter:nth-child(1)').classList.add('active');
-        } else if (filter === 'classroom') {
-            document.querySelector('.btn-filter:nth-child(2)').classList.add('active');
-        } else {
-            document.querySelector('.btn-filter:nth-child(3)').classList.add('active');
-        }
+        const activeFilter = (filter === 'teacher' || filter === 'classroom') ? filter : 'all';
+        document.querySelectorAll('.btn-filter').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        document.querySelector(`.btn-filter[data-filter="${activeFilter}"]`)?.classList.add('active');
 
     } catch (error) {
         loading.style.display = 'none';
