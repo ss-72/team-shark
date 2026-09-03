@@ -12,6 +12,13 @@ DAYS = list(VALID_DAYS)
 PERIODS = [1, 2, 3, 4, 5]
 
 
+class TimetableGenerationError(Exception):
+    """時間割自動生成が制約を満たせず失敗したことを表す例外"""
+    def __init__(self, shortages):
+        super().__init__("Timetable generation failed")
+        self.shortages = shortages
+
+
 def teacher_can_teach(teacher_id, subject_id):
     return bool(
         TeacherSubject.query.filter_by(teacher_id=teacher_id, subject_id=subject_id).first()
@@ -128,8 +135,19 @@ def _candidate_shortages(requirements, schedule=None):
         if required <= 0:
             continue
         assigned = counts.get(subject.id, 0)
-        if assigned >= required:
+        if assigned == required:
             continue
+        if assigned > required:
+            shortages.append({
+                'subject_id': subject.id,
+                'subject_name': subject.name,
+                'required': required,
+                'assigned': assigned,
+                'missing': required - assigned,
+                'reason': 'assigned periods exceed required periods',
+            })
+            continue
+
         eligible_teachers = [
             row.teacher_id for row in TeacherSubject.query.filter_by(subject_id=subject.id).all()
         ]
@@ -139,6 +157,7 @@ def _candidate_shortages(requirements, schedule=None):
             reason = 'available teacher/time slots are insufficient'
         shortages.append({
             'subject_id': subject.id,
+            'subject_name': subject.name,
             'required': required,
             'assigned': assigned,
             'missing': required - assigned,
@@ -149,6 +168,7 @@ def _candidate_shortages(requirements, schedule=None):
 
 def validate_schedule(schedule):
     schedule = list(schedule or [])
+    requirements = _subject_requirements()
     teacher_slots = set()
     classroom_slots = set()
     counts = Counter()
@@ -167,10 +187,14 @@ def validate_schedule(schedule):
             day_of_week = item['day_of_week']
             period = item['period']
 
+        subj = Subject.query.get(subject_id)
+        subj_name = subj.name if subj else f"科目ID:{subject_id}"
+
         if not teacher_can_teach(teacher_id, subject_id):
             return False, [{
                 'subject_id': subject_id,
-                'required': 0,
+                'subject_name': subj_name,
+                'required': requirements.get(subject_id, 0),
                 'assigned': counts.get(subject_id, 0),
                 'missing': 1,
                 'reason': 'teacher is not assigned to the subject',
@@ -178,7 +202,8 @@ def validate_schedule(schedule):
         if not is_teacher_available(teacher_id, day_of_week, period):
             return False, [{
                 'subject_id': subject_id,
-                'required': 0,
+                'subject_name': subj_name,
+                'required': requirements.get(subject_id, 0),
                 'assigned': counts.get(subject_id, 0),
                 'missing': 1,
                 'reason': 'teacher is unavailable at that slot',
@@ -189,7 +214,8 @@ def validate_schedule(schedule):
         if teacher_key in teacher_slots or classroom_key in classroom_slots:
             return False, [{
                 'subject_id': subject_id,
-                'required': 0,
+                'subject_name': subj_name,
+                'required': requirements.get(subject_id, 0),
                 'assigned': counts.get(subject_id, 0),
                 'missing': 1,
                 'reason': 'teacher or classroom conflict detected',
@@ -199,7 +225,6 @@ def validate_schedule(schedule):
         classroom_slots.add(classroom_key)
         counts[subject_id] += 1
 
-    requirements = _subject_requirements()
     shortages = _candidate_shortages(requirements, schedule)
     if shortages:
         return False, shortages
@@ -310,16 +335,14 @@ def generate_candidate_schedule():
     success, shortages = backtrack(0)
 
     if not success:
-        raise ValueError({
-            'error': 'timetable_generation_failed',
-            'shortages': (
-                shortages
-                or _candidate_shortages(
-                    requirements,
-                    chosen
-                )
+        actual_shortages = (
+            shortages
+            or _candidate_shortages(
+                requirements,
+                chosen
             )
-        })
+        )
+        raise TimetableGenerationError(actual_shortages)
 
     return chosen
 
@@ -328,19 +351,23 @@ def generate_timetable():
     """時間割を自動生成し、成功時のみ既存データを置換する。"""
     candidate_schedule = generate_candidate_schedule()
 
-    Timetable.query.delete()
-    created = []
-    for item in candidate_schedule:
-        timetable = Timetable(
-            day_of_week=item['day_of_week'],
-            period=item['period'],
-            teacher_id=item['teacher_id'],
-            subject_id=item['subject_id'],
-            classroom_id=item['classroom_id'],
-            is_online=False,
-        )
-        db.session.add(timetable)
-        created.append(timetable)
+    try:
+        Timetable.query.delete()
+        created = []
+        for item in candidate_schedule:
+            timetable = Timetable(
+                day_of_week=item['day_of_week'],
+                period=item['period'],
+                teacher_id=item['teacher_id'],
+                subject_id=item['subject_id'],
+                classroom_id=item['classroom_id'],
+                is_online=False,
+            )
+            db.session.add(timetable)
+            created.append(timetable)
 
-    db.session.commit()
-    return created
+        db.session.commit()
+        return created
+    except Exception:
+        db.session.rollback()
+        raise

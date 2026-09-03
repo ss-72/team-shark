@@ -8,7 +8,7 @@ from models.subject import Subject
 from models.teacher_subject import TeacherSubject
 from models.teacher_unavailability import TeacherUnavailability, VALID_DAYS
 from sqlalchemy.exc import IntegrityError
-from services.timetable_generator import generate_timetable
+from services.timetable_generator import generate_timetable, TimetableGenerationError
 from utils.auth import require_admin
 
 # 時間割関連の API をまとめた Blueprint
@@ -97,6 +97,15 @@ def auto_generate():
             "count": len(created),
             "timetables": [t.to_dict() for t in created]
         }), 201
+    except TimetableGenerationError as e:
+        return jsonify({
+            "error": "timetable_generation_failed",
+            "shortages": e.shortages
+        }), 422
+    except ValueError as e:
+        if e.args and isinstance(e.args[0], dict) and e.args[0].get('error') == 'timetable_generation_failed':
+            return jsonify(e.args[0]), 422
+        return jsonify({"error": str(e)}), 500
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
