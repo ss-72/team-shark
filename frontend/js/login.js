@@ -1,5 +1,15 @@
 const LOGIN_API_URL = 'http://localhost:5000/api';
 
+function fillAdmin() {
+    document.getElementById('login-username').value = 'admin';
+    document.getElementById('login-password').value = 'adminpassword123';
+}
+
+function fillTeacher() {
+    document.getElementById('login-username').value = 'teacher';
+    document.getElementById('login-password').value = 'teacher123';
+}
+
 document.getElementById('login-form').addEventListener('submit', async (event) => {
     event.preventDefault();
     const error = document.getElementById('login-error');
@@ -22,7 +32,7 @@ document.getElementById('login-form').addEventListener('submit', async (event) =
         if (user.role === 'teacher') {
             window.location.href = 'pages/my_timetable.html';
         } else {
-            window.location.href = 'pages/subjects.html';
+            window.location.href = 'pages/timetables.html';
         }
     } catch (err) {
         error.textContent = err.message;

@@ -3,31 +3,189 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Schedule Connect</title>
+    <title>時間割・教室自動割り当てシステム - Schedule Connect</title>
     <link rel="stylesheet" href="css/style.css">
+    <style>
+        .demo-guide {
+            background: #e3f2fd;
+            border: 1px solid #90caf9;
+            border-radius: 8px;
+            padding: 16px 20px;
+            margin-bottom: 24px;
+        }
+        .demo-guide h3 {
+            color: #1565c0;
+            margin-bottom: 8px;
+            font-size: 16px;
+        }
+        .demo-guide ol {
+            margin-left: 20px;
+            font-size: 14px;
+            line-height: 1.8;
+            color: #333;
+        }
+        .quick-fill-box {
+            background: #f8f9fa;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 12px 16px;
+            margin-bottom: 16px;
+        }
+        .quick-fill-box p {
+            font-size: 13px;
+            color: #4a5568;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+        .quick-btn-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .btn-quick {
+            background: #fff;
+            border: 1px solid #1976d2;
+            color: #1976d2;
+            padding: 7px 16px;
+            border-radius: 4px;
+            font-size: 13px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.15s ease-in-out;
+        }
+        .btn-quick:hover {
+            background: #1976d2;
+            color: #fff;
+        }
+        .nav-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 16px;
+            margin-top: 16px;
+            list-style: none;
+            padding: 0;
+        }
+        .nav-card {
+            background: #fff;
+            border-radius: 8px;
+            padding: 18px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            text-decoration: none;
+            color: inherit;
+            border-top: 4px solid #1976d2;
+            display: block;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .nav-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .nav-card h4 {
+            color: #1976d2;
+            margin-bottom: 6px;
+            font-size: 16px;
+        }
+        .nav-card p {
+            font-size: 13px;
+            color: #666;
+            line-height: 1.4;
+        }
+    </style>
 </head>
 <body class="page-background">
     <div id="app">
         <header>
-            <h1>Schedule Connect ~未来へ~</h1>
+            <div>
+                <h1>時間割・教室自動割り当てシステム</h1>
+                <p style="color: #666; font-size: 14px; margin-top: 4px;">教員出勤NG・必要コマ数遵守 ＆ 教員本人時間割管理</p>
+            </div>
         </header>
+
+        <!-- デモ操作ガイド -->
+        <section class="demo-guide">
+            <h3>🔰 デモ受入確認の流れ</h3>
+            <ol>
+                <li>
+                    <strong>管理者としてログイン</strong>（下の「👑 管理者を入力」ボタンを押してログイン）<br>
+                    → <a href="pages/timetables.html" style="color: #1976d2; font-weight: bold;">時間割管理</a> へ進み、<strong>「⚡ 自動生成を実行」</strong> をクリックすると制約を満たした時間割が作成されます。
+                </li>
+                <li>
+                    <strong>教員としてログイン</strong>（ログアウト後、下の「👨‍🏫 教員を入力」ボタンを押してログイン）<br>
+                    → <a href="pages/my_timetable.html" style="color: #1976d2; font-weight: bold;">自分の時間割画面</a> に自動遷移し、山田先生本人に割り当てられた授業・教室だけを確認できます。
+                </li>
+            </ol>
+        </section>
+
+        <!-- ログインフォーム -->
         <section class="form-section" id="login-section">
-            <h2>管理者ログイン</h2>
+            <h2>ログイン</h2>
+
+            <div class="quick-fill-box">
+                <p>⚡ デモ用ワンクリック入力:</p>
+                <div class="quick-btn-group">
+                    <button type="button" class="btn-quick" onclick="fillAdmin()">👑 管理者を入力 (admin)</button>
+                    <button type="button" class="btn-quick" onclick="fillTeacher()">👨‍🏫 教員を入力 (teacher / 山田先生)</button>
+                </div>
+            </div>
+
             <form id="login-form">
-                <div class="form-group"><label for="login-username">ユーザー名</label><input id="login-username" required value="admin"></div>
-                <div class="form-group"><label for="login-password">パスワード</label><input id="login-password" type="password" required></div>
-                <div class="form-actions"><button type="submit" id="login-btn">ログイン</button></div>
+                <div class="form-group">
+                    <label for="login-username">ユーザー名</label>
+                    <input id="login-username" required placeholder="例: admin または teacher">
+                </div>
+                <div class="form-group">
+                    <label for="login-password">パスワード</label>
+                    <input id="login-password" type="password" required placeholder="パスワードを入力">
+                </div>
+                <div class="form-actions">
+                    <button type="submit" id="login-btn">ログイン</button>
+                </div>
                 <p id="login-error" class="error-message" style="display:none"></p>
             </form>
         </section>
-        <ul class="nav-list">
-            <li><a href="pages/teachers.html">教員管理</a></li>
-            <li><a href="pages/subjects.html">科目管理</a></li>
-            <li><a href="pages/classrooms.html">教室管理</a></li>
-            <li><a href="pages/time_slots.html">時間枠管理</a></li>
-            <li><a href="pages/timetables.html">時間割管理</a></li>
+
+        <!-- 機能一覧リンクカード -->
+        <h3 style="margin-top: 32px; color: #333; font-size: 16px;">📌 各機能・管理画面一覧</h3>
+        <ul class="nav-grid">
+            <li>
+                <a href="pages/timetables.html" class="nav-card" style="border-top-color: #e91e63;">
+                    <h4>⚡ 時間割管理・自動生成</h4>
+                    <p>自動生成の実行、週間カレンダー表示、不足理由レポートの確認</p>
+                </a>
+            </li>
+            <li>
+                <a href="pages/my_timetable.html" class="nav-card" style="border-top-color: #4caf50;">
+                    <h4>👨‍🏫 自分の時間割</h4>
+                    <p>教員本人の割当授業・教室の確認（教員ログイン専用）</p>
+                </a>
+            </li>
+            <li>
+                <a href="pages/subjects.html" class="nav-card" style="border-top-color: #2196f3;">
+                    <h4>📚 科目管理</h4>
+                    <p>科目一覧、週あたり必要コマ数の設定・管理</p>
+                </a>
+            </li>
+            <li>
+                <a href="pages/teachers.html" class="nav-card" style="border-top-color: #ff9800;">
+                    <h4>🧑‍🏫 教員管理</h4>
+                    <p>教員一覧、担当可能科目設定、出勤不可日時（NG）設定</p>
+                </a>
+            </li>
+            <li>
+                <a href="pages/classrooms.html" class="nav-card" style="border-top-color: #9c27b0;">
+                    <h4>🏫 教室管理</h4>
+                    <p>教室一覧、定員・優先学科・オンライン対応設定</p>
+                </a>
+            </li>
+            <li>
+                <a href="pages/time_slots.html" class="nav-card" style="border-top-color: #607d8b;">
+                    <h4>⏰ 時間枠管理</h4>
+                    <p>時限・開始終了時刻の設定</p>
+                </a>
+            </li>
         </ul>
     </div>
+
     <script src="js/main.js"></script>
     <script src="js/login.js"></script>
 </body>

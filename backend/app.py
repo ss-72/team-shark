@@ -104,6 +104,7 @@ def create_app(config_override=None):
             _seed_teachers()
             _seed_classrooms()
             _seed_admin_user()
+            _seed_demo_data()
 
     return app
 
@@ -169,6 +170,41 @@ def _seed_admin_user():
     admin.set_password(password)
     db.session.add(admin)
     db.session.commit()
+
+
+def _seed_demo_data():
+    # デモ用の初期科目および教員割当を作成
+    if Subject.query.count() == 0:
+        python_subj = Subject(name='Python基礎', required_periods_per_week=3)
+        web_subj = Subject(name='ネットワーク', required_periods_per_week=2)
+        db.session.add_all([python_subj, web_subj])
+        db.session.commit()
+
+        yamada = Teacher.query.filter_by(name='山田 太郎').first()
+        tanaka = Teacher.query.filter_by(name='田中 花子').first()
+        if yamada and tanaka:
+            db.session.add_all([
+                TeacherSubject(teacher_id=yamada.id, subject_id=python_subj.id),
+                TeacherSubject(teacher_id=tanaka.id, subject_id=web_subj.id),
+                # 山田先生: 火曜終日NG、木曜3限NGを設定
+                TeacherUnavailability(teacher_id=yamada.id, day_of_week='Tuesday', period=None),
+                TeacherUnavailability(teacher_id=yamada.id, day_of_week='Thursday', period=3),
+            ])
+            db.session.commit()
+
+    # デモ用の教員ログインアカウント（山田 太郎先生）を作成
+    if not User.query.filter_by(username='teacher').first():
+        yamada = Teacher.query.filter_by(name='山田 太郎').first()
+        teacher_user = User(
+            username='teacher',
+            role='teacher',
+            teacher_id=yamada.id if yamada else None,
+            is_active=True
+        )
+        teacher_user.set_password('teacher123')
+        db.session.add(teacher_user)
+        db.session.commit()
+
 
 if __name__ == '__main__':
     app = create_app()
