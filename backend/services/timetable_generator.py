@@ -11,6 +11,14 @@ from models.timetable import Timetable
 DAYS = list(VALID_DAYS)
 PERIODS = [1, 2, 3, 4, 5]
 
+DAY_ORDER = {
+    'Monday': 0,
+    'Tuesday': 1,
+    'Wednesday': 2,
+    'Thursday': 3,
+    'Friday': 4,
+}
+
 
 class TimetableGenerationError(Exception):
     """時間割自動生成が制約を満たせず失敗したことを表す例外"""
@@ -89,7 +97,7 @@ def build_candidates(subject_id, used_teacher_slots=None, used_classroom_slots=N
     return sorted(
         candidates,
         key=lambda item: (
-            item['day_of_week'],
+            DAY_ORDER.get(item['day_of_week'], 99),
             item['period'],
             item['teacher_id'],
             item['classroom_id'],
@@ -286,6 +294,16 @@ def generate_candidate_schedule():
             used_teacher_slots,
             used_classroom_slots
         )
+
+        day_load = Counter(item['day_of_week'] for item in chosen)
+        options.sort(key=lambda item: (
+            day_load[item['day_of_week']],
+            DAY_ORDER.get(item['day_of_week'], 99),
+            item['period'],
+            item['teacher_id'],
+            item['classroom_id'],
+            item['subject_id'],
+        ))
 
         for option in options:
             candidate = {

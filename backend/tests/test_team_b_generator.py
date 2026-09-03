@@ -331,6 +331,33 @@ class TeamBRequirementsTestCase(unittest.TestCase):
         for it in spoof_items:
             self.assertEqual(it['teacher_id'], teacher_a.id)
 
+    def test_requirement_K_weekday_distribution(self):
+        """K. 曜日均等配置の検証: Monday〜Fridayの5日間に均等に分散配置されること"""
+        from collections import Counter
+        from app import _seed_teachers, _seed_classrooms, _seed_demo_data
+
+        # 高度ITエンジニア科のマスターデータをシード
+        _seed_teachers()
+        _seed_classrooms()
+        _seed_demo_data()
+
+        schedule = generate_candidate_schedule()
+        self.assertEqual(len(schedule), 26)
+
+        # 1. Monday〜Friday の5日間すべてが使われていること
+        used_days = {item['day_of_week'] for item in schedule}
+        expected_days = {'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'}
+        self.assertEqual(used_days, expected_days)
+
+        # 2. 曜日ごとの件数を集計し、極端な偏りがないこと
+        day_counts = Counter(item['day_of_week'] for item in schedule)
+        for d in expected_days:
+            self.assertGreaterEqual(day_counts[d], 1, f'{d} に最低1コマ以上配置されること')
+
+        # 26コマの5日間配置において max - min <= 1 (理想: 6, 5, 5, 5, 5)
+        diff = max(day_counts.values()) - min(day_counts.values())
+        self.assertLessEqual(diff, 1, f'曜日間のコマ数差が1以内であること (実際: {day_counts})')
+
 
 if __name__ == '__main__':
     unittest.main()
