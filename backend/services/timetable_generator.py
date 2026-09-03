@@ -322,51 +322,6 @@ def generate_candidate_schedule():
         })
 
     return chosen
-    used_classroom_slots = set()
-
-    def backtrack(index):
-        if index == len(task_queue):
-            is_valid, shortages = validate_schedule(chosen)
-            return is_valid, shortages
-
-        subject_id = task_queue[index]
-        options = build_candidates(subject_id, used_teacher_slots, used_classroom_slots)
-
-        for option in options:
-            candidate = {
-                'subject_id': option['subject_id'],
-                'teacher_id': option['teacher_id'],
-                'classroom_id': option['classroom_id'],
-                'day_of_week': option['day_of_week'],
-                'period': option['period'],
-            }
-            teacher_key = (candidate['day_of_week'], candidate['period'], candidate['teacher_id'])
-            classroom_key = (candidate['day_of_week'], candidate['period'], candidate['classroom_id'])
-
-            if teacher_key in used_teacher_slots or classroom_key in used_classroom_slots:
-                continue
-            chosen.append(candidate)
-            used_teacher_slots.add(teacher_key)
-            used_classroom_slots.add(classroom_key)
-
-            success, shortages = backtrack(index + 1)
-            if success:
-                return True, []
-
-            used_teacher_slots.remove(teacher_key)
-            used_classroom_slots.remove(classroom_key)
-            chosen.pop()
-
-        return False, _candidate_shortages(requirements, chosen)
-
-    success, shortages = backtrack(0)
-    if not success:
-        raise ValueError({
-            'error': 'timetable_generation_failed',
-            'shortages': shortages or _candidate_shortages(requirements, chosen),
-        })
-
-    return chosen
 
 
 def generate_timetable():
