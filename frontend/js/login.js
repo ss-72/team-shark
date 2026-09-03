@@ -17,7 +17,13 @@ document.getElementById('login-form').addEventListener('submit', async (event) =
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
-        window.location.href = 'pages/subjects.html';
+
+        const user = data.user || {};
+        if (user.role === 'teacher') {
+            window.location.href = 'pages/my_timetable.html';
+        } else {
+            window.location.href = 'pages/subjects.html';
+        }
     } catch (err) {
         error.textContent = err.message;
         error.style.display = 'block';

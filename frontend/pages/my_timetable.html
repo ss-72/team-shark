@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>自分の時間割 - Scrum Board</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <div id="app">
+        <header>
+            <div>
+                <h1>自分の時間割</h1>
+                <p id="user-info" style="color: #666; font-size: 14px; margin-top: 4px;"></p>
+            </div>
+            <div style="display: flex; gap: 12px; align-items: center;">
+                <button id="logout-btn" class="btn-delete" style="padding: 8px 16px; font-size: 14px; cursor: pointer;" onclick="handleLogout()">ログアウト</button>
+            </div>
+        </header>
+
+        <section class="list-section">
+            <h2>割当時間割・教室</h2>
+            <div id="loading">読み込み中...</div>
+            <div id="error" class="error-message" style="display:none; font-size: 14px; margin-bottom: 12px;"></div>
+            <table id="my-timetable-table" class="data-table" style="display:none;">
+                <thead>
+                    <tr>
+                        <th>曜日</th>
+                        <th>時限</th>
+                        <th>科目</th>
+                        <th>割当教室</th>
+                    </tr>
+                </thead>
+                <tbody id="my-timetable-list"></tbody>
+            </table>
+            <p id="no-data" style="display:none;">割り当てられている授業はありません。</p>
+        </section>
+    </div>
+
+    <script src="../js/my_timetable.js"></script>
+</body>
+</html>
