@@ -14,15 +14,16 @@ SECRET_KEY=dev-secret-key-12345
 ADMIN_USERNAME=admin
 ADMIN_PASSWORD=adminpassword123
 
-# MySQL接続設定（環境に合わせて修正してください）
-MYSQL_HOST=localhost
-MYSQL_PORT=3306
-MYSQL_USER=root
-MYSQL_PASSWORD=root
-MYSQL_DATABASE=scrum_db
+# Database (SQLite)
+DATABASE_URL=sqlite:///school_db.sqlite
+# MySQLを使用する場合は上記をコメントアウトし以下を設定してください
+# MYSQL_HOST=localhost
+# MYSQL_PORT=3306
+# MYSQL_USER=root
+# MYSQL_PASSWORD=root
+# MYSQL_DATABASE=scrum_db
 "@ | Out-File -FilePath ".env" -Encoding utf8
-    Write-Host "[INFO] backend/.env を作成しました。" -ForegroundColor Green
-    Write-Host "       MySQLの接続設定が異なる場合は backend\.env を編集してください。" -ForegroundColor Gray
+    Write-Host "[INFO] backend/.env を作成しました（デフォルト: SQLite）。" -ForegroundColor Green
 }
 
 Write-Host "[INFO] アプリケーションを起動しています..." -ForegroundColor Green
