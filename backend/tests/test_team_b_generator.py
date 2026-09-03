@@ -264,6 +264,73 @@ class TeamBRequirementsTestCase(unittest.TestCase):
         self.assertEqual(remaining[0].id, existing_id)
         self.assertEqual(remaining[0].day_of_week, 'Friday')
 
+    def test_my_timetable_auth_and_isolation(self):
+        """教員本人用時間割APIの認証・権限・他者分離テスト"""
+        teacher_a = self._create_teacher('教員A')
+        teacher_b = self._create_teacher('教員B')
+        classroom_1 = self._create_classroom('101')
+        classroom_2 = self._create_classroom('102')
+
+        subj_a = self._create_subject('Python基礎', 2)
+        subj_b = self._create_subject('ネットワーク', 1)
+
+        db.session.add_all([
+            TeacherSubject(teacher_id=teacher_a.id, subject_id=subj_a.id),
+            TeacherSubject(teacher_id=teacher_b.id, subject_id=subj_b.id),
+            Timetable(teacher_id=teacher_a.id, subject_id=subj_a.id, classroom_id=classroom_1.id, day_of_week='Wednesday', period=3),
+            Timetable(teacher_id=teacher_a.id, subject_id=subj_a.id, classroom_id=classroom_1.id, day_of_week='Monday', period=1),
+            Timetable(teacher_id=teacher_b.id, subject_id=subj_b.id, classroom_id=classroom_2.id, day_of_week='Thursday', period=2),
+        ])
+        db.session.commit()
+
+        # 1. 未ログインなら 401
+        res_unauth = self.client.get('/api/my/timetable')
+        self.assertEqual(res_unauth.status_code, 401)
+
+        # 2. adminなら 403
+        admin = self._create_admin('admin_user')
+        self._login_as(admin)
+        res_admin = self.client.get('/api/my/timetable')
+        self.assertEqual(res_admin.status_code, 403)
+
+        # 3. teacher_idのない教員ユーザーなら 400
+        user_no_teacher = User(username='no_teacher_user', role='teacher', teacher_id=None, is_active=True)
+        user_no_teacher.set_password('pass')
+        db.session.add(user_no_teacher)
+        db.session.commit()
+        self._login_as(user_no_teacher)
+        res_no_tid = self.client.get('/api/my/timetable')
+        self.assertEqual(res_no_tid.status_code, 400)
+
+        # 4. teacher Aでログイン -> A本人の時間割のみ取得でき、Bのものは含まれない
+        user_a = User(username='teacher_a_user', role='teacher', teacher_id=teacher_a.id, is_active=True)
+        user_a.set_password('pass')
+        db.session.add(user_a)
+        db.session.commit()
+        self._login_as(user_a)
+
+        res_a = self.client.get('/api/my/timetable')
+        self.assertEqual(res_a.status_code, 200)
+        items = res_a.get_json()
+        self.assertEqual(len(items), 2)
+        # 曜日・時限順にソートされていること（Monday 1限 が先、Wednesday 3限 が次）
+        self.assertEqual(items[0]['day_of_week'], 'Monday')
+        self.assertEqual(items[0]['period'], 1)
+        self.assertEqual(items[0]['subject'], 'Python基礎')
+        self.assertEqual(items[0]['classroom'], '101')
+        self.assertEqual(items[0]['teacher_id'], teacher_a.id)
+
+        self.assertEqual(items[1]['day_of_week'], 'Wednesday')
+        self.assertEqual(items[1]['period'], 3)
+
+        # 5. クライアントから ?teacher_id=999 や teacher_b.id を送っても無視されること
+        res_spoof = self.client.get(f'/api/my/timetable?teacher_id={teacher_b.id}')
+        self.assertEqual(res_spoof.status_code, 200)
+        spoof_items = res_spoof.get_json()
+        self.assertEqual(len(spoof_items), 2)
+        for it in spoof_items:
+            self.assertEqual(it['teacher_id'], teacher_a.id)
+
 
 if __name__ == '__main__':
     unittest.main()

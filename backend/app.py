@@ -25,6 +25,7 @@ from routes.users import users_bp
 from routes.subjects import subjects_bp
 from routes.teacher_subjects import teacher_subjects_bp
 from routes.teacher_unavailability import teacher_unavailability_bp
+from routes.my_timetable import my_timetable_bp
 
 load_dotenv()
 
@@ -88,6 +89,7 @@ def create_app(config_override=None):
     app.register_blueprint(subjects_bp, url_prefix='/api/subjects')
     app.register_blueprint(teacher_subjects_bp, url_prefix='/api/teacher_subjects')
     app.register_blueprint(teacher_unavailability_bp, url_prefix='/api/teacher_unavailability')
+    app.register_blueprint(my_timetable_bp, url_prefix='/api/my/timetable')
 
     @app.route('/')
     def frontend_index():
