@@ -3,7 +3,7 @@ const teacherId = Number(new URLSearchParams(window.location.search).get('id'));
 const dayLabels = { Monday: '月曜日', Tuesday: '火曜日', Wednesday: '水曜日', Thursday: '木曜日', Friday: '金曜日' };
 
 async function fetchAPI(endpoint, options = {}) {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, { headers: { 'Content-Type': 'application/json' }, ...options });
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, { headers: { 'Content-Type': 'application/json' }, credentials: 'include', ...options });
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
     return data;

@@ -2,7 +2,7 @@ from datetime import time
 import os
 from urllib.parse import quote_plus
 
-from flask import Flask
+from flask import Flask, send_from_directory
 from flask_cors import CORS
 from dotenv import load_dotenv
 from database import db
@@ -50,8 +50,12 @@ def _get_database_url():
     raise RuntimeError('DATABASE_URL or MYSQL_HOST/MYSQL_USER/MYSQL_PASSWORD/MYSQL_DATABASE must be set')
 
 def create_app(config_override=None):
-    app = Flask(__name__)
-    CORS(app)
+    app = Flask(__name__, static_folder='../frontend', static_url_path='')
+    CORS(
+        app,
+        supports_credentials=True,
+        origins=['http://localhost:8080', 'http://127.0.0.1:8080'],
+    )
 
     # Apply test overrides before consulting configuration that controls
     # startup validation.  This keeps the production fail-closed behavior
@@ -84,6 +88,10 @@ def create_app(config_override=None):
     app.register_blueprint(subjects_bp, url_prefix='/api/subjects')
     app.register_blueprint(teacher_subjects_bp, url_prefix='/api/teacher_subjects')
     app.register_blueprint(teacher_unavailability_bp, url_prefix='/api/teacher_unavailability')
+
+    @app.route('/')
+    def frontend_index():
+        return send_from_directory(app.static_folder, 'index.html')
 
     with app.app_context():
         db.create_all()

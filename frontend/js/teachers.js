@@ -4,6 +4,7 @@ async function fetchAPI(endpoint, options = {}) {
     try {
         const response = await fetch(`${API_BASE_URL}${endpoint}`, {
             headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
             ...options,
         });
         const data = await response.json();
