@@ -54,6 +54,7 @@ async function showWeekCalendar(filter, filterId, filterName) {
                 } else if (entries.length === 1) {
                     const t = entries[0];
                     html += `<td class="entry-cell">
+                        <div class="entry-subject" style="font-weight: bold; color: #1976d2; margin-bottom: 2px;">${escapeHtml(t.subject_name || '科目ID:' + t.subject_id)}</div>
                         <div class="entry-teacher">${escapeHtml(t.teacher_name || '教員ID:' + t.teacher_id)}</div>
                         <div class="entry-classroom">${escapeHtml(t.classroom_name || '教室ID:' + t.classroom_id)}</div>
                     </td>`;
@@ -62,7 +63,8 @@ async function showWeekCalendar(filter, filterId, filterName) {
                     html += `<td class="multi-entry-cell">
                         <div class="multi-entry-count">${entries.length}件</div>
                         ${entries.map(t => `
-                            <div class="multi-entry-item">
+                            <div class="multi-entry-item" style="margin-bottom: 4px; padding-bottom: 4px; border-bottom: 1px dashed #e0e0e0;">
+                                <div class="entry-subject" style="font-weight: bold; color: #1976d2; margin-bottom: 2px;">${escapeHtml(t.subject_name || '科目ID:' + t.subject_id)}</div>
                                 <div class="entry-teacher">${escapeHtml(t.teacher_name || '教員ID:' + t.teacher_id)}</div>
                                 <div class="entry-classroom">${escapeHtml(t.classroom_name || '教室ID:' + t.classroom_id)}</div>
                             </div>

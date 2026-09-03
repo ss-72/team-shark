@@ -64,9 +64,9 @@
 
         <section class="action-section">
             <h2>自動生成</h2>
-            <p>現在の時間割を全て削除し、教員・教室の重複がない時間割を自動生成します。</p>
+            <p>条件を満たす時間割を生成し、成功した場合のみ現在の時間割を置き換えます。</p>
             <button id="generate-btn" class="btn-generate" onclick="generateTimetable()">⚡ 自動生成を実行</button>
-            <p id="generate-result" class="success-message" style="display:none;"></p>
+            <div id="generate-result" style="display:none; margin-top: 12px;"></div>
         </section>
 
         <section class="calendar-section">

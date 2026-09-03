@@ -7,9 +7,12 @@ async function fetchAPI(endpoint, options = {}) {
             credentials: 'include',
             ...options,
         });
-        const data = await response.json();
+        const data = await response.json().catch(() => ({}));
         if (!response.ok) {
-            throw new Error(data.error || `HTTP ${response.status}`);
+            const err = new Error(data.error || `HTTP ${response.status}`);
+            err.status = response.status;
+            err.payload = data;
+            throw err;
         }
         return data;
     } catch (error) {
@@ -189,24 +192,77 @@ function escapeHtml(str) {
 
 // 自動生成
 async function generateTimetable() {
-    if (!confirm('現在の時間割を全て削除して、自動生成を実行します。よろしいですか？')) return;
+    if (!confirm('条件を満たす時間割を生成し、成功した場合のみ現在の時間割を置き換えます。よろしいですか？')) return;
 
     const btn = document.getElementById('generate-btn');
     const result = document.getElementById('generate-result');
     btn.disabled = true;
     btn.textContent = '⏳ 生成中...';
     result.style.display = 'none';
+    result.innerHTML = '';
 
     try {
         const res = await fetchAPI('/timetables/generate', { method: 'POST' });
-        result.textContent = `✅ ${res.count}件の時間割を自動生成しました`;
-        result.className = 'success-message';
+
+        // 科目別の割当コマ数を集計
+        const subjectCounts = {};
+        if (res.timetables && res.timetables.length > 0) {
+            res.timetables.forEach(t => {
+                const name = t.subject_name || `科目ID:${t.subject_id}`;
+                subjectCounts[name] = (subjectCounts[name] || 0) + 1;
+            });
+        }
+
+        let successHtml = `<div class="success-message" style="padding: 12px; border-radius: 6px; background: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9;">`;
+        successHtml += `<div style="font-weight: bold; font-size: 15px;">✅ ${res.count}件の時間割を自動生成しました</div>`;
+        if (Object.keys(subjectCounts).length > 0) {
+            successHtml += `<ul style="margin: 8px 0 0 20px; font-size: 13px; line-height: 1.6;">`;
+            for (const [sName, count] of Object.entries(subjectCounts)) {
+                successHtml += `<li><strong>${escapeHtml(sName)}</strong>: ${count}コマ生成</li>`;
+            }
+            successHtml += `</ul>`;
+        }
+        successHtml += `</div>`;
+
+        result.innerHTML = successHtml;
         result.style.display = 'block';
         await loadTimetables();
         showWeekCalendar('all');
     } catch (error) {
-        result.textContent = '❌ 自動生成に失敗しました: ' + error.message;
-        result.className = 'error-message';
+        let errorHtml = `<div class="error-message" style="padding: 12px; border-radius: 6px; background: #ffebee; color: #c62828; border: 1px solid #ffcdd2;">`;
+        if (error.status === 422 && error.payload && error.payload.shortages) {
+            errorHtml += `<div style="font-weight: bold; font-size: 15px;">❌ 時間割を生成できませんでした（条件不足）</div>`;
+            errorHtml += `<p style="margin: 6px 0 10px 0; font-size: 13px; color: #555;">以下の科目の必要コマ数を満たせなかったため、直前の時間割が保持されました。</p>`;
+            errorHtml += `<div style="display: flex; flex-direction: column; gap: 8px;">`;
+            error.payload.shortages.forEach(s => {
+                const sName = s.subject_name || `科目ID:${s.subject_id}`;
+                let reasonText = s.reason;
+                if (s.reason === 'no eligible teacher for subject') {
+                    reasonText = '担当可能な教員が登録されていません';
+                } else if (s.reason === 'available teacher/time slots are insufficient') {
+                    reasonText = '利用可能な教員・時限が不足しています';
+                } else if (s.reason === 'assigned periods exceed required periods') {
+                    reasonText = '割当コマ数が必要コマ数を超過しています';
+                }
+                errorHtml += `
+                    <div style="background: #fff; padding: 10px 14px; border-radius: 4px; border-left: 4px solid #d32f2f; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                        <div style="font-weight: bold; font-size: 14px; color: #222;">${escapeHtml(sName)}</div>
+                        <div style="font-size: 13px; color: #444; margin-top: 4px;">
+                            必要: <strong>${s.required}</strong> / 割当可能: <strong>${s.assigned}</strong> / 不足: <strong style="color:#d32f2f;">${s.missing}</strong>
+                        </div>
+                        <div style="font-size: 12px; color: #d32f2f; margin-top: 4px;">
+                            理由: ${escapeHtml(reasonText)}
+                        </div>
+                    </div>
+                `;
+            });
+            errorHtml += `</div>`;
+        } else {
+            errorHtml += `<div style="font-weight: bold;">❌ 自動生成に失敗しました: ${escapeHtml(error.message)}</div>`;
+        }
+        errorHtml += `</div>`;
+
+        result.innerHTML = errorHtml;
         result.style.display = 'block';
     } finally {
         btn.disabled = false;
