@@ -1,5 +1,7 @@
 const API_BASE_URL = 'http://localhost:5000/api';
 
+let cachedSubjects = [];
+
 async function fetchAPI(endpoint, options = {}) {
     try {
         const response = await fetch(`${API_BASE_URL}${endpoint}`, {
@@ -21,7 +23,7 @@ async function fetchAPI(endpoint, options = {}) {
     }
 }
 
-// 教員・教室の選択肢を読み込む
+// 教員・科目・教室の選択肢を初期読み込み
 async function loadSelectOptions() {
     try {
         const [teachers, subjects, classrooms] = await Promise.all([
@@ -29,22 +31,61 @@ async function loadSelectOptions() {
             fetchAPI('/subjects'),
             fetchAPI('/classrooms'),
         ]);
+        cachedSubjects = subjects;
+
         const teacherSelect = document.getElementById('teacher_id');
-        const subjectSelect = document.getElementById('subject_id');
         const classroomSelect = document.getElementById('classroom_id');
 
-        teacherSelect.innerHTML = '<option value="">-- 選択 --</option>' +
+        teacherSelect.innerHTML = '<option value="">-- 選択してください --</option>' +
             teachers.map(t => `<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('');
 
-        subjectSelect.innerHTML = '<option value="">-- 選択 --</option>' +
-            subjects.map(s => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('');
-
-        classroomSelect.innerHTML = '<option value="">-- 選択 --</option>' +
+        classroomSelect.innerHTML = '<option value="">-- 選択してください --</option>' +
             classrooms.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
+
+        // 初期状態では教員未選択の案内
+        updateSubjectOptions('');
     } catch (error) {
         console.error('選択肢の読み込みに失敗:', error);
     }
 }
+
+// 教員選択に連動して担当可能科目を絞り込む（安全なフォールバック付き）
+async function updateSubjectOptions(teacherId, selectedSubjectId = null) {
+    const subjectSelect = document.getElementById('subject_id');
+    if (!teacherId) {
+        subjectSelect.innerHTML = '<option value="">-- 先に教員を選択してください --</option>';
+        return;
+    }
+
+    try {
+        const assignments = await fetchAPI(`/teachers/${teacherId}/subjects`);
+        if (assignments && assignments.length > 0) {
+            subjectSelect.innerHTML = '<option value="">-- 担当可能科目から選択 --</option>' +
+                assignments.map(a => {
+                    const subId = a.subject_id;
+                    const subName = a.subject ? a.subject.name : `科目ID:${subId}`;
+                    return `<option value="${subId}">${escapeHtml(subName)}</option>`;
+                }).join('');
+        } else {
+            // 担当可能科目が設定されていない教員の場合、手動登録を妨げないよう全科目をフォールバック表示
+            subjectSelect.innerHTML = '<option value="">-- 科目を選択 (全科目) --</option>' +
+                cachedSubjects.map(s => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('');
+        }
+    } catch (e) {
+        console.warn('担当可能科目の取得に失敗したため全科目を表示します:', e);
+        subjectSelect.innerHTML = '<option value="">-- 科目を選択 --</option>' +
+            cachedSubjects.map(s => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('');
+    }
+
+    if (selectedSubjectId) {
+        subjectSelect.value = selectedSubjectId;
+    }
+}
+
+// 教員変更イベントリスナーの紐付け
+document.getElementById('teacher_id').addEventListener('change', (e) => {
+    updateSubjectOptions(e.target.value);
+});
 
 async function loadTimetables() {
     const loading = document.getElementById('loading');
@@ -72,7 +113,7 @@ async function loadTimetables() {
             <tr>
                 <td>${t.id}</td>
                 <td>${dayLabels[t.day_of_week] || t.day_of_week}</td>
-                <td>${t.period}</td>
+                <td>${t.period}限</td>
                 <td>${escapeHtml(t.teacher_name || '教員ID:' + t.teacher_id)}</td>
                 <td>${escapeHtml(t.subject_name || '科目ID:' + t.subject_id)}</td>
                 <td>${escapeHtml(t.classroom_name || '教室ID:' + t.classroom_id)}</td>
@@ -128,6 +169,9 @@ document.getElementById('timetable-form').addEventListener('submit', async (e) =
         }
         resetForm();
         await loadTimetables();
+        if (typeof showWeekCalendar === 'function') {
+            showWeekCalendar('all');
+        }
     } catch (error) {
         showFormError(error.message);
     }
@@ -135,23 +179,27 @@ document.getElementById('timetable-form').addEventListener('submit', async (e) =
 
 async function editTimetable(id) {
     try {
-        const [timetable] = await Promise.all([
-            fetchAPI(`/timetables/${id}`),
-            loadSelectOptions(),
-        ]);
+        const timetable = await fetchAPI(`/timetables/${id}`);
+
+        // アコーディオンを展開
+        const detailsEl = document.getElementById('manual-adjust-section');
+        if (detailsEl) detailsEl.open = true;
+
         document.getElementById('timetable-id').value = timetable.id;
         document.getElementById('day_of_week').value = timetable.day_of_week;
         document.getElementById('period').value = timetable.period;
         document.getElementById('teacher_id').value = timetable.teacher_id;
-        document.getElementById('subject_id').value = timetable.subject_id;
         document.getElementById('classroom_id').value = timetable.classroom_id;
         document.getElementById('is_online').checked = timetable.is_online;
 
-        document.getElementById('form-title').textContent = '編集';
+        // 教員連動の科目リストを更新し、科目をセット
+        await updateSubjectOptions(timetable.teacher_id, timetable.subject_id);
+
+        document.getElementById('form-title').textContent = `授業情報の編集 (ID: ${timetable.id})`;
         document.getElementById('submit-btn').textContent = '更新';
         document.getElementById('cancel-btn').style.display = '';
 
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        detailsEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
     } catch (error) {
         alert('時間割データの取得に失敗しました: ' + error.message);
     }
@@ -163,6 +211,9 @@ async function deleteTimetable(id) {
     try {
         await fetchAPI(`/timetables/${id}`, { method: 'DELETE' });
         await loadTimetables();
+        if (typeof showWeekCalendar === 'function') {
+            showWeekCalendar('all');
+        }
     } catch (error) {
         alert('削除に失敗しました: ' + error.message);
     }
@@ -176,6 +227,7 @@ function resetForm() {
     document.getElementById('submit-btn').textContent = '登録';
     document.getElementById('cancel-btn').style.display = 'none';
     document.getElementById('form-error').style.display = 'none';
+    updateSubjectOptions('');
 }
 
 function showFormError(message) {
@@ -185,6 +237,7 @@ function showFormError(message) {
 }
 
 function escapeHtml(str) {
+    if (!str) return '';
     const div = document.createElement('div');
     div.textContent = str;
     return div.innerHTML;
@@ -192,12 +245,12 @@ function escapeHtml(str) {
 
 // 自動生成
 async function generateTimetable() {
-    if (!confirm('条件を満たす時間割を生成し、成功した場合のみ現在の時間割を置き換えます。よろしいですか？')) return;
+    if (!confirm('条件（出勤条件・必要コマ数・教室割当）を満たす時間割を自動生成します。\n生成に成功した場合、現在の時間割が置き換わります。実行しますか？')) return;
 
     const btn = document.getElementById('generate-btn');
     const result = document.getElementById('generate-result');
     btn.disabled = true;
-    btn.textContent = '⏳ 生成中...';
+    btn.textContent = '生成中...';
     result.style.display = 'none';
     result.innerHTML = '';
 
@@ -213,12 +266,12 @@ async function generateTimetable() {
             });
         }
 
-        let successHtml = `<div class="success-message" style="padding: 12px; border-radius: 6px; background: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9;">`;
-        successHtml += `<div style="font-weight: bold; font-size: 15px;">✅ ${res.count}件の時間割を自動生成しました</div>`;
+        let successHtml = `<div class="success-box">`;
+        successHtml += `<div style="font-weight: 600; font-size: 15px;">時間割を自動生成しました（合計 ${res.count} コマ）</div>`;
         if (Object.keys(subjectCounts).length > 0) {
-            successHtml += `<ul style="margin: 8px 0 0 20px; font-size: 13px; line-height: 1.6;">`;
+            successHtml += `<ul style="margin: 10px 0 0 20px; font-size: 13px; line-height: 1.6;">`;
             for (const [sName, count] of Object.entries(subjectCounts)) {
-                successHtml += `<li><strong>${escapeHtml(sName)}</strong>: ${count}コマ生成</li>`;
+                successHtml += `<li><strong>${escapeHtml(sName)}</strong>: ${count}コマ割り当て</li>`;
             }
             successHtml += `</ul>`;
         }
@@ -227,12 +280,14 @@ async function generateTimetable() {
         result.innerHTML = successHtml;
         result.style.display = 'block';
         await loadTimetables();
-        showWeekCalendar('all');
+        if (typeof showWeekCalendar === 'function') {
+            showWeekCalendar('all');
+        }
     } catch (error) {
-        let errorHtml = `<div class="error-message" style="padding: 12px; border-radius: 6px; background: #ffebee; color: #c62828; border: 1px solid #ffcdd2;">`;
+        let errorHtml = `<div class="error-box">`;
         if (error.status === 422 && error.payload && error.payload.shortages) {
-            errorHtml += `<div style="font-weight: bold; font-size: 15px;">❌ 時間割を生成できませんでした（条件不足）</div>`;
-            errorHtml += `<p style="margin: 6px 0 10px 0; font-size: 13px; color: #555;">以下の科目の必要コマ数を満たせなかったため、直前の時間割が保持されました。</p>`;
+            errorHtml += `<div style="font-weight: 600; font-size: 15px;">時間割を生成できませんでした（制約条件の不足）</div>`;
+            errorHtml += `<p style="margin: 6px 0 12px 0; font-size: 13px; color: #475569;">以下の科目の必要コマ数を満たせなかったため、直前の時間割が保持されました。</p>`;
             errorHtml += `<div style="display: flex; flex-direction: column; gap: 8px;">`;
             error.payload.shortages.forEach(s => {
                 const sName = s.subject_name || `科目ID:${s.subject_id}`;
@@ -240,25 +295,25 @@ async function generateTimetable() {
                 if (s.reason === 'no eligible teacher for subject') {
                     reasonText = '担当可能な教員が登録されていません';
                 } else if (s.reason === 'available teacher/time slots are insufficient') {
-                    reasonText = '利用可能な教員・時限が不足しています';
+                    reasonText = '教員の出勤条件または空き時限が不足しています';
                 } else if (s.reason === 'assigned periods exceed required periods') {
                     reasonText = '割当コマ数が必要コマ数を超過しています';
                 }
                 errorHtml += `
-                    <div style="background: #fff; padding: 10px 14px; border-radius: 4px; border-left: 4px solid #d32f2f; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
-                        <div style="font-weight: bold; font-size: 14px; color: #222;">${escapeHtml(sName)}</div>
-                        <div style="font-size: 13px; color: #444; margin-top: 4px;">
-                            必要: <strong>${s.required}</strong> / 割当可能: <strong>${s.assigned}</strong> / 不足: <strong style="color:#d32f2f;">${s.missing}</strong>
+                    <div style="background: #ffffff; padding: 10px 14px; border-radius: 6px; border: 1px solid #fecaca; border-left: 4px solid #dc2626;">
+                        <div style="font-weight: 600; font-size: 14px; color: #1e293b;">${escapeHtml(sName)}</div>
+                        <div style="font-size: 13px; color: #475569; margin-top: 4px;">
+                            必要コマ数: <strong>${s.required}</strong> / 割当可能: <strong>${s.assigned}</strong> / 不足: <strong style="color:#dc2626;">${s.missing}</strong>
                         </div>
-                        <div style="font-size: 12px; color: #d32f2f; margin-top: 4px;">
-                            理由: ${escapeHtml(reasonText)}
+                        <div style="font-size: 12px; color: #b91c1c; margin-top: 4px;">
+                            原因: ${escapeHtml(reasonText)}
                         </div>
                     </div>
                 `;
             });
             errorHtml += `</div>`;
         } else {
-            errorHtml += `<div style="font-weight: bold;">❌ 自動生成に失敗しました: ${escapeHtml(error.message)}</div>`;
+            errorHtml += `<div style="font-weight: 600;">自動生成に失敗しました: ${escapeHtml(error.message)}</div>`;
         }
         errorHtml += `</div>`;
 
@@ -266,7 +321,7 @@ async function generateTimetable() {
         result.style.display = 'block';
     } finally {
         btn.disabled = false;
-        btn.textContent = '⚡ 自動生成を実行';
+        btn.textContent = '時間割を生成';
     }
 }
 

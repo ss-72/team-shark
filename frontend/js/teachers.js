@@ -41,11 +41,12 @@ async function loadTeachers() {
         tbody.innerHTML = teachers.map(t => `
             <tr>
                 <td>${t.id}</td>
-                <td>${escapeHtml(t.name)}</td>
-                <td>${escapeHtml(t.employment_type || '')}</td>
-                <td>${escapeHtml(t.department || '')}</td>
-                <td>${escapeHtml(t.subject || '')}</td>
-                <td><a class="btn-edit" href="teacher_settings.html?id=${t.id}">設定</a></td>
+                <td><strong>${escapeHtml(t.name)}</strong></td>
+                <td>${escapeHtml(t.employment_type || '-')}</td>
+                <td>${escapeHtml(t.department || '-')}</td>
+                <td>
+                    <a class="btn-edit" href="teacher_settings.html?id=${t.id}">担当科目・NG設定</a>
+                </td>
                 <td class="action-btns">
                     <button onclick="editTeacher(${t.id})" class="btn-edit">編集</button>
                     <button onclick="deleteTeacher(${t.id})" class="btn-delete">削除</button>
@@ -103,7 +104,7 @@ async function editTeacher(id) {
         document.getElementById('department').value = teacher.department || '';
         document.getElementById('subject').value = teacher.subject || '';
 
-        document.getElementById('form-title').textContent = '編集';
+        document.getElementById('form-title').textContent = '教員情報の編集';
         document.getElementById('submit-btn').textContent = '更新';
         document.getElementById('cancel-btn').style.display = '';
 
@@ -114,7 +115,7 @@ async function editTeacher(id) {
 }
 
 async function deleteTeacher(id) {
-    if (!confirm('この教員を削除してもよろしいですか？')) return;
+    if (!confirm('この教員を削除してもよろしいですか？\n関連する担当科目や出勤条件も影響を受ける場合があります。')) return;
 
     try {
         await fetchAPI(`/teachers/${id}`, { method: 'DELETE' });
@@ -127,6 +128,7 @@ async function deleteTeacher(id) {
 function resetForm() {
     document.getElementById('teacher-form').reset();
     document.getElementById('teacher-id').value = '';
+    document.getElementById('subject').value = '';
     document.getElementById('form-title').textContent = '新規登録';
     document.getElementById('submit-btn').textContent = '登録';
     document.getElementById('cancel-btn').style.display = 'none';
@@ -140,6 +142,7 @@ function showFormError(message) {
 }
 
 function escapeHtml(str) {
+    if (!str) return '';
     const div = document.createElement('div');
     div.textContent = str;
     return div.innerHTML;

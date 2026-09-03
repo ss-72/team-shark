@@ -3,28 +3,111 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>教員設定 - Schedule Connect</title>
+    <title>担当科目・出勤条件設定 - Schedule Connect</title>
     <link rel="stylesheet" href="../css/style.css">
 </head>
 <body>
     <div id="app">
-        <header><h1 id="page-title">教員設定</h1><a href="teachers.html" class="back-link">← 教員管理へ戻る</a></header>
-        <p id="page-error" class="error-message" style="display:none"></p>
-        <section class="form-section">
-            <h2>担当可能科目</h2>
-            <form id="assignment-form"><div class="form-group"><label for="subject-id">科目</label><select id="subject-id" required></select></div><div class="form-actions"><button>追加</button></div></form>
-            <table class="data-table"><thead><tr><th>科目</th><th>操作</th></tr></thead><tbody id="assignment-list"></tbody></table>
-        </section>
-        <section class="form-section">
-            <h2>曜日・時限NG</h2>
-            <form id="unavailability-form">
-                <div class="form-group"><label for="day-of-week">曜日</label><select id="day-of-week"><option value="Monday">月曜日</option><option value="Tuesday">火曜日</option><option value="Wednesday">水曜日</option><option value="Thursday">木曜日</option><option value="Friday">金曜日</option></select></div>
-                <div class="form-group"><label for="period">時限</label><select id="period"><option value="">終日</option><option value="1">1限</option><option value="2">2限</option><option value="3">3限</option><option value="4">4限</option><option value="5">5限</option></select></div>
-                <div class="form-actions"><button>NG時間を追加</button></div>
-            </form>
-            <table class="data-table"><thead><tr><th>曜日</th><th>時限</th><th>操作</th></tr></thead><tbody id="unavailability-list"></tbody></table>
-        </section>
+        <header id="common-admin-header"></header>
+
+        <div class="page-title-bar">
+            <div>
+                <h1 id="page-title">教員の担当科目・出勤条件</h1>
+                <p class="page-description">時間割の自動作成時に考慮される担当科目と出勤不可条件を設定します</p>
+            </div>
+            <a href="teachers.html" class="btn-secondary" style="font-size: 13px;">教員一覧へ戻る</a>
+        </div>
+
+        <p id="page-error" class="error-message" style="display:none; margin-bottom: 16px;"></p>
+
+        <div class="settings-grid">
+            <!-- 担当可能科目セクション -->
+            <section class="card-section">
+                <h2>担当可能科目</h2>
+                <p style="font-size: 13px; color: #64748b; margin-bottom: 14px;">
+                    この教員が担当できる科目を登録します。自動作成時にこの教員へ割り当てられます。
+                </p>
+
+                <table class="data-table" style="margin-bottom: 20px;">
+                    <thead>
+                        <tr>
+                            <th>科目名</th>
+                            <th style="width: 80px;">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="assignment-list"></tbody>
+                </table>
+                <p id="no-assignment" style="display:none; font-size: 13px; color: #94a3b8; margin-bottom: 16px;">
+                    担当可能科目が設定されていません。
+                </p>
+
+                <div style="background: #f8fafc; padding: 14px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                    <h3 style="font-size: 13px; font-weight: 600; margin-bottom: 10px; color: #334155;">科目を追加</h3>
+                    <form id="assignment-form">
+                        <div class="form-group" style="margin-bottom: 10px;">
+                            <label for="subject-id">追加する科目</label>
+                            <select id="subject-id" required></select>
+                        </div>
+                        <button type="submit" class="btn-primary" style="font-size: 13px; padding: 6px 14px;">科目を追加</button>
+                    </form>
+                </div>
+            </section>
+
+            <!-- 出勤できない曜日・時限セクション -->
+            <section class="card-section">
+                <h2>出勤できない曜日・時限</h2>
+                <p style="font-size: 13px; color: #64748b; margin-bottom: 14px;">
+                    都合により授業を担当できない日時を設定します。自動作成時にこのコマを避けて時間割が組まれます。
+                </p>
+
+                <table class="data-table" style="margin-bottom: 20px;">
+                    <thead>
+                        <tr>
+                            <th>曜日</th>
+                            <th>時限</th>
+                            <th style="width: 80px;">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="unavailability-list"></tbody>
+                </table>
+                <p id="no-unavailability" style="display:none; font-size: 13px; color: #94a3b8; margin-bottom: 16px;">
+                    出勤不可条件は設定されていません（全時間帯で勤務可能）。
+                </p>
+
+                <div style="background: #f8fafc; padding: 14px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                    <h3 style="font-size: 13px; font-weight: 600; margin-bottom: 10px; color: #334155;">条件を追加</h3>
+                    <form id="unavailability-form">
+                        <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                            <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                                <label for="day-of-week">曜日</label>
+                                <select id="day-of-week">
+                                    <option value="Monday">月曜日</option>
+                                    <option value="Tuesday">火曜日</option>
+                                    <option value="Wednesday">水曜日</option>
+                                    <option value="Thursday">木曜日</option>
+                                    <option value="Friday">金曜日</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                                <label for="period">時限</label>
+                                <select id="period">
+                                    <option value="">終日</option>
+                                    <option value="1">1限</option>
+                                    <option value="2">2限</option>
+                                    <option value="3">3限</option>
+                                    <option value="4">4限</option>
+                                    <option value="5">5限</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn-primary" style="font-size: 13px; padding: 6px 14px;">条件を追加</button>
+                    </form>
+                </div>
+            </section>
+        </div>
     </div>
+
+    <script src="../js/admin_nav.js"></script>
     <script src="../js/teacher_settings.js"></script>
 </body>
 </html>

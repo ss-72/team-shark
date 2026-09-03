@@ -3,26 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>自分の時間割 - Scrum Board</title>
+    <title>自分の時間割 - Schedule Connect</title>
     <link rel="stylesheet" href="../css/style.css">
 </head>
 <body>
     <div id="app">
-        <header>
-            <div>
-                <h1>自分の時間割</h1>
-                <p id="user-info" style="color: #666; font-size: 14px; margin-top: 4px;"></p>
+        <header class="app-header">
+            <div class="brand-logo">
+                <span class="brand-name">Schedule Connect</span>
+                <span class="system-tag" style="background: #ecfdf5; color: #065f46;">教員ポータル</span>
             </div>
-            <div style="display: flex; gap: 12px; align-items: center;">
-                <a href="../index.html" class="back-link">← ログイン画面へ</a>
-                <button id="logout-btn" class="btn-delete" style="padding: 8px 16px; font-size: 14px; cursor: pointer;" onclick="handleLogout()">ログアウト</button>
+            <div class="nav-user-area">
+                <span class="user-badge" id="user-info">教員: 読み込み中...</span>
+                <button type="button" class="btn-logout" id="logout-btn" onclick="handleLogout()">ログアウト</button>
             </div>
         </header>
 
+        <div class="page-title-bar">
+            <div>
+                <h1>自分の時間割</h1>
+                <p class="page-description">現在あなたに割り当てられている授業および教室の一覧です</p>
+            </div>
+        </div>
+
         <section class="list-section">
-            <h2>割当時間割・教室</h2>
+            <h2>割当授業一覧</h2>
             <div id="loading">読み込み中...</div>
-            <div id="error" class="error-message" style="display:none; font-size: 14px; margin-bottom: 12px;"></div>
+            <div id="error" class="error-message" style="display:none; margin-bottom: 12px;"></div>
             <table id="my-timetable-table" class="data-table" style="display:none;">
                 <thead>
                     <tr>

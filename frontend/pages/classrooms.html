@@ -3,15 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>教室管理 - Scrum Board</title>
+    <title>教室管理 - Schedule Connect</title>
     <link rel="stylesheet" href="../css/style.css">
 </head>
 <body>
     <div id="app">
-        <header>
-            <h1>教室管理</h1>
-            <a href="../index.html" class="back-link">← 戻る</a>
-        </header>
+        <header id="common-admin-header"></header>
+
+        <div class="page-title-bar">
+            <div>
+                <h1>教室管理</h1>
+                <p class="page-description">教室情報の登録、収容人数、階数、優先所属の管理</p>
+            </div>
+        </div>
 
         <section class="form-section">
             <h2 id="form-title">新規登録</h2>
@@ -34,8 +38,8 @@
                     <input type="text" id="priority_department" placeholder="例: 情報工学科">
                 </div>
                 <div class="form-actions">
-                    <button type="submit" id="submit-btn">登録</button>
-                    <button type="button" id="cancel-btn" style="display:none;" onclick="resetForm()">キャンセル</button>
+                    <button type="submit" id="submit-btn" class="btn-primary">登録</button>
+                    <button type="button" id="cancel-btn" class="btn-secondary" style="display:none;" onclick="resetForm()">キャンセル</button>
                 </div>
                 <p id="form-error" class="error-message" style="display:none;"></p>
             </form>
@@ -61,6 +65,7 @@
         </section>
     </div>
 
+    <script src="../js/admin_nav.js"></script>
     <script src="../js/classrooms.js"></script>
 </body>
 </html>

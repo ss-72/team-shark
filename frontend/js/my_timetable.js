@@ -50,17 +50,17 @@ async function init() {
     errorEl.style.display = 'none';
 
     try {
-        // ログイン確認
+        // ログイン状態確認
         const user = await fetchAPI('/auth/me');
         if (user.role !== 'teacher') {
-            userInfo.textContent = `ログイン中: ${escapeHtml(user.username)} (${user.role})`;
+            userInfo.textContent = `${escapeHtml(user.username)} (${user.role})`;
             loading.style.display = 'none';
-            errorEl.textContent = 'この画面は教員専用です。管理者画面をご利用ください。';
+            errorEl.innerHTML = `この画面は教員専用です。<a href="admin_dashboard.html" style="color: #2563eb; text-decoration: underline;">管理者ダッシュボード</a> をご利用ください。`;
             errorEl.style.display = 'block';
             return;
         }
 
-        userInfo.textContent = `ログイン中: ${escapeHtml(user.username)} 先生`;
+        userInfo.textContent = `${escapeHtml(user.username)} 先生`;
 
         // 自分の時間割取得
         const timetables = await fetchAPI('/my/timetable');
@@ -74,8 +74,8 @@ async function init() {
         tbody.innerHTML = timetables.map(t => `
             <tr>
                 <td>${DAY_LABELS[t.day_of_week] || escapeHtml(t.day_of_week)}</td>
-                <td>${escapeHtml(String(t.period))}限</td>
-                <td>${escapeHtml(t.subject || t.subject_name || '科目ID:' + t.subject_id)}</td>
+                <td><strong>${escapeHtml(String(t.period))}限</strong></td>
+                <td><strong>${escapeHtml(t.subject || t.subject_name || '科目ID:' + t.subject_id)}</strong></td>
                 <td>${escapeHtml(t.classroom || t.classroom_name || '教室ID:' + t.classroom_id)}</td>
             </tr>
         `).join('');

@@ -1,5 +1,16 @@
 const LOGIN_API_URL = 'http://localhost:5000/api';
 
+// URLパラメータに ?demo=1 がある場合のみクイック入力を表示
+document.addEventListener('DOMContentLoaded', () => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('demo') === '1') {
+        const demoSection = document.getElementById('demo-quick-section');
+        if (demoSection) {
+            demoSection.style.display = 'block';
+        }
+    }
+});
+
 function fillAdmin() {
     document.getElementById('login-username').value = 'admin';
     document.getElementById('login-password').value = 'adminpassword123';
@@ -32,10 +43,10 @@ document.getElementById('login-form').addEventListener('submit', async (event) =
         if (user.role === 'teacher') {
             window.location.href = 'pages/my_timetable.html';
         } else {
-            window.location.href = 'pages/timetables.html';
+            window.location.href = 'pages/admin_dashboard.html';
         }
     } catch (err) {
-        error.textContent = err.message;
+        error.textContent = err.message === 'Invalid credentials' ? 'ユーザー名またはパスワードが正しくありません。' : err.message;
         error.style.display = 'block';
     }
 });

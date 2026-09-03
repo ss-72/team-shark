@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理者ダッシュボード - Schedule Connect</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <div id="app">
+        <header id="common-admin-header"></header>
+
+        <div class="page-title-bar">
+            <div>
+                <h1>管理者ダッシュボード</h1>
+                <p class="page-description">システムの概要確認と各マスターデータ・時間割の管理</p>
+            </div>
+        </div>
+
+        <!-- システム概要カード -->
+        <div class="stat-grid">
+            <div class="stat-card">
+                <span class="stat-card-header">登録時間割</span>
+                <span class="stat-card-value" id="stat-timetables">-</span>
+                <span class="stat-card-desc">現在の作成済みコマ数</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-card-header">科目数</span>
+                <span class="stat-card-value" id="stat-subjects">-</span>
+                <span class="stat-card-desc">必要コマ数設定済み科目</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-card-header">教員数</span>
+                <span class="stat-card-value" id="stat-teachers">-</span>
+                <span class="stat-card-desc">登録教員（条件設定可能）</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-card-header">教室数</span>
+                <span class="stat-card-value" id="stat-classrooms">-</span>
+                <span class="stat-card-desc">利用可能な教室・収容人数</span>
+            </div>
+        </div>
+
+        <!-- 管理機能クイックアクセス -->
+        <section class="card-section">
+            <h2>管理機能一覧</h2>
+            <div class="quick-nav-grid">
+                <a href="timetables.html" class="quick-nav-card">
+                    <span class="quick-nav-title">時間割管理</span>
+                    <span class="quick-nav-desc">出勤条件・必要コマ数を遵守した自動生成、週間カレンダー確認、手動調整を行います。</span>
+                </a>
+                <a href="subjects.html" class="quick-nav-card">
+                    <span class="quick-nav-title">科目管理</span>
+                    <span class="quick-nav-desc">授業科目一覧の登録および週あたりの必要コマ数の設定・管理を行います。</span>
+                </a>
+                <a href="teachers.html" class="quick-nav-card">
+                    <span class="quick-nav-title">教員管理</span>
+                    <span class="quick-nav-desc">教員の基本情報管理、担当可能科目の割当、出勤できない曜日・時限（NG）の設定を行います。</span>
+                </a>
+                <a href="classrooms.html" class="quick-nav-card">
+                    <span class="quick-nav-title">教室管理</span>
+                    <span class="quick-nav-desc">講義室・演習室の登録、収容人数、階数、優先所属の設定を行います。</span>
+                </a>
+                <a href="time_slots.html" class="quick-nav-card">
+                    <span class="quick-nav-title">時間枠管理</span>
+                    <span class="quick-nav-desc">時限の定義、授業開始時刻および終了時刻の設定を行います。</span>
+                </a>
+            </div>
+        </section>
+    </div>
+
+    <script src="../js/admin_nav.js"></script>
+    <script src="../js/admin_dashboard.js"></script>
+</body>
+</html>

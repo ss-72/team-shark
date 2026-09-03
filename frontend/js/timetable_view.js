@@ -21,7 +21,7 @@ async function showWeekCalendar(filter, filterId, filterName) {
         loading.style.display = 'none';
 
         if (timetables.length === 0) {
-            calendar.innerHTML = '<p class="no-data-message">時間割データがありません。「自動生成を実行」してください。</p>';
+            calendar.innerHTML = '<p class="no-data-message">時間割データがありません。「時間割を生成」を実行してください。</p>';
             return;
         }
 

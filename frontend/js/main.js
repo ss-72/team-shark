@@ -1,5 +1,5 @@
 // Main frontend application
-console.log('Scrum Board loaded');
+console.log('Schedule Connect loaded');
 
 const API_BASE_URL = 'http://localhost:5000/api';
 
