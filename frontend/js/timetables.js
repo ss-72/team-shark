@@ -49,10 +49,11 @@ async function loadSelectOptions() {
     }
 }
 
-// 教員選択に連動して担当可能科目を絞り込む（安全なフォールバック付き）
+// 教員選択に連動して担当可能科目を絞り込む
 async function updateSubjectOptions(teacherId, selectedSubjectId = null) {
     const subjectSelect = document.getElementById('subject_id');
     if (!teacherId) {
+        subjectSelect.disabled = true;
         subjectSelect.innerHTML = '<option value="">-- 先に教員を選択してください --</option>';
         return;
     }
@@ -60,6 +61,7 @@ async function updateSubjectOptions(teacherId, selectedSubjectId = null) {
     try {
         const assignments = await fetchAPI(`/teachers/${teacherId}/subjects`);
         if (assignments && assignments.length > 0) {
+            subjectSelect.disabled = false;
             subjectSelect.innerHTML = '<option value="">-- 担当可能科目から選択 --</option>' +
                 assignments.map(a => {
                     const subId = a.subject_id;
@@ -67,17 +69,16 @@ async function updateSubjectOptions(teacherId, selectedSubjectId = null) {
                     return `<option value="${subId}">${escapeHtml(subName)}</option>`;
                 }).join('');
         } else {
-            // 担当可能科目が設定されていない教員の場合、手動登録を妨げないよう全科目をフォールバック表示
-            subjectSelect.innerHTML = '<option value="">-- 科目を選択 (全科目) --</option>' +
-                cachedSubjects.map(s => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('');
+            subjectSelect.disabled = true;
+            subjectSelect.innerHTML = '<option value="">担当可能科目が設定されていません</option>';
         }
     } catch (e) {
-        console.warn('担当可能科目の取得に失敗したため全科目を表示します:', e);
-        subjectSelect.innerHTML = '<option value="">-- 科目を選択 --</option>' +
-            cachedSubjects.map(s => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('');
+        console.warn('担当可能科目の取得に失敗しました:', e);
+        subjectSelect.disabled = true;
+        subjectSelect.innerHTML = '<option value="">担当可能科目の取得に失敗しました</option>';
     }
 
-    if (selectedSubjectId) {
+    if (selectedSubjectId && !subjectSelect.disabled) {
         subjectSelect.value = selectedSubjectId;
     }
 }

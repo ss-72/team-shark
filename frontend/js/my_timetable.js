@@ -60,7 +60,8 @@ async function init() {
             return;
         }
 
-        userInfo.textContent = `${escapeHtml(user.username)} 先生`;
+        const teacherName = user.teacher_name || user.username;
+        userInfo.textContent = `${escapeHtml(teacherName)} 先生`;
 
         // 自分の時間割取得
         const timetables = await fetchAPI('/my/timetable');

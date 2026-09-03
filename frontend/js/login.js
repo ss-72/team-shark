@@ -46,7 +46,14 @@ document.getElementById('login-form').addEventListener('submit', async (event) =
             window.location.href = 'pages/admin_dashboard.html';
         }
     } catch (err) {
-        error.textContent = err.message === 'Invalid credentials' ? 'ユーザー名またはパスワードが正しくありません。' : err.message;
+        const msg = (err.message || '').toLowerCase();
+        if (msg.includes('invalid credentials')) {
+            error.textContent = 'ユーザー名またはパスワードが正しくありません。';
+        } else if (msg.includes('username and password required')) {
+            error.textContent = 'ユーザー名とパスワードを入力してください。';
+        } else {
+            error.textContent = err.message || 'ログインに失敗しました。';
+        }
         error.style.display = 'block';
     }
 });

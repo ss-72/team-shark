@@ -110,31 +110,39 @@ def create_app(config_override=None):
 
 
 def _seed_teachers():
-    if Teacher.query.count() > 0:
-        return
-
-    seed_rows = [
-        Teacher(name='山田 太郎', employment_type='常勤', department='情報科学科', subject='数学'),
-        Teacher(name='田中 花子', employment_type='常勤', department='国語科', subject='国語'),
-        Teacher(name='佐藤 次郎', employment_type='常勤', department='英語科', subject='英語'),
-        Teacher(name='鈴木 一郎', employment_type='非常勤', department='体育科', subject='体育'),
-        Teacher(name='高橋 美咲', employment_type='非常勤', department='美術科', subject='美術'),
+    teachers_data = [
+        {'name': '山田 太郎', 'employment_type': '常勤', 'department': '高度ITエンジニア科', 'subject': ''},
+        {'name': '田中 花子', 'employment_type': '常勤', 'department': '高度ITエンジニア科', 'subject': ''},
+        {'name': '佐藤 次郎', 'employment_type': '常勤', 'department': '高度ITエンジニア科', 'subject': ''},
+        {'name': '鈴木 一郎', 'employment_type': '非常勤', 'department': '高度ITエンジニア科', 'subject': ''},
+        {'name': '高橋 美咲', 'employment_type': '非常勤', 'department': '高度ITエンジニア科', 'subject': ''},
     ]
-    db.session.add_all(seed_rows)
+    for data in teachers_data:
+        teacher = Teacher.query.filter_by(name=data['name']).first()
+        if not teacher:
+            db.session.add(Teacher(**data))
+        else:
+            teacher.employment_type = data['employment_type']
+            teacher.department = data['department']
+            teacher.subject = data['subject']
     db.session.commit()
 
 
 def _seed_classrooms():
-    if Classroom.query.count() > 0:
-        return
-
-    seed_rows = [
-        Classroom(name='101教室', capacity=40, floor=1, priority_department='情報科学科'),
-        Classroom(name='201教室', capacity=35, floor=2, priority_department='国語科'),
-        Classroom(name='理科室', capacity=30, floor=3, priority_department='理科'),
-        Classroom(name='体育館', capacity=200, floor=1, priority_department='体育科'),
+    classrooms_data = [
+        {'name': 'PC実習室A', 'capacity': 40, 'floor': 5, 'priority_department': '高度ITエンジニア科'},
+        {'name': 'PC実習室B', 'capacity': 40, 'floor': 5, 'priority_department': '高度ITエンジニア科'},
+        {'name': 'システム実習室', 'capacity': 30, 'floor': 6, 'priority_department': '高度ITエンジニア科'},
+        {'name': '講義室A', 'capacity': 50, 'floor': 6, 'priority_department': '高度ITエンジニア科'},
     ]
-    db.session.add_all(seed_rows)
+    for data in classrooms_data:
+        classroom = Classroom.query.filter_by(name=data['name']).first()
+        if not classroom:
+            db.session.add(Classroom(**data))
+        else:
+            classroom.capacity = data['capacity']
+            classroom.floor = data['floor']
+            classroom.priority_department = data['priority_department']
     db.session.commit()
 
 
@@ -173,28 +181,71 @@ def _seed_admin_user():
 
 
 def _seed_demo_data():
-    # デモ用の初期科目および教員割当を作成
-    if Subject.query.count() == 0:
-        python_subj = Subject(name='Python基礎', required_periods_per_week=3)
-        web_subj = Subject(name='ネットワーク', required_periods_per_week=2)
-        db.session.add_all([python_subj, web_subj])
-        db.session.commit()
+    # 高度ITエンジニア科 2025年度カリキュラムに基づく科目データ
+    subjects_data = [
+        {'name': 'チーム開発技法', 'required_periods_per_week': 6},
+        {'name': 'WEBアプリケーション', 'required_periods_per_week': 4},
+        {'name': 'プログラミング言語Ⅲ', 'required_periods_per_week': 4},
+        {'name': 'クラウド技術基礎', 'required_periods_per_week': 3},
+        {'name': '情報セキュリティⅡ', 'required_periods_per_week': 3},
+        {'name': 'データベース設計', 'required_periods_per_week': 2},
+        {'name': 'サーバ構築', 'required_periods_per_week': 2},
+        {'name': 'システム開発演習', 'required_periods_per_week': 2},
+    ]
+    subject_map = {}
+    for s_data in subjects_data:
+        subj = Subject.query.filter_by(name=s_data['name']).first()
+        if not subj:
+            subj = Subject(**s_data)
+            db.session.add(subj)
+            db.session.flush()
+        else:
+            subj.required_periods_per_week = s_data['required_periods_per_week']
+        subject_map[s_data['name']] = subj
+    db.session.commit()
 
-        yamada = Teacher.query.filter_by(name='山田 太郎').first()
-        tanaka = Teacher.query.filter_by(name='田中 花子').first()
-        if yamada and tanaka:
-            db.session.add_all([
-                TeacherSubject(teacher_id=yamada.id, subject_id=python_subj.id),
-                TeacherSubject(teacher_id=tanaka.id, subject_id=web_subj.id),
-                # 山田先生: 火曜終日NG、木曜3限NGを設定
-                TeacherUnavailability(teacher_id=yamada.id, day_of_week='Tuesday', period=None),
-                TeacherUnavailability(teacher_id=yamada.id, day_of_week='Thursday', period=3),
-            ])
-            db.session.commit()
+    # 教員ごとの担当可能科目 (TeacherSubject)
+    teacher_assignments = {
+        '山田 太郎': ['チーム開発技法', 'WEBアプリケーション', 'システム開発演習'],
+        '田中 花子': ['プログラミング言語Ⅲ', 'データベース設計'],
+        '佐藤 次郎': ['サーバ構築', 'クラウド技術基礎'],
+        '鈴木 一郎': ['情報セキュリティⅡ', 'WEBアプリケーション'],
+        '高橋 美咲': ['チーム開発技法', 'システム開発演習'],
+    }
+    for teacher_name, sub_names in teacher_assignments.items():
+        teacher = Teacher.query.filter_by(name=teacher_name).first()
+        if not teacher:
+            continue
+        for sub_name in sub_names:
+            subj = subject_map.get(sub_name) or Subject.query.filter_by(name=sub_name).first()
+            if not subj:
+                continue
+            exists = TeacherSubject.query.filter_by(teacher_id=teacher.id, subject_id=subj.id).first()
+            if not exists:
+                db.session.add(TeacherSubject(teacher_id=teacher.id, subject_id=subj.id))
+    db.session.commit()
 
-    # デモ用の教員ログインアカウント（山田 太郎先生）を作成
-    if not User.query.filter_by(username='teacher').first():
-        yamada = Teacher.query.filter_by(name='山田 太郎').first()
+    # 出勤不可条件 (TeacherUnavailability)
+    # 山田 太郎: 火曜日 終日不可, 木曜日 3限不可
+    # 佐藤 次郎: 水曜日 1限不可
+    unavailabilities = [
+        ('山田 太郎', 'Tuesday', None),
+        ('山田 太郎', 'Thursday', 3),
+        ('佐藤 次郎', 'Wednesday', 1),
+    ]
+    for teacher_name, day, period in unavailabilities:
+        teacher = Teacher.query.filter_by(name=teacher_name).first()
+        if not teacher:
+            continue
+        exists = TeacherUnavailability.query.filter_by(teacher_id=teacher.id, day_of_week=day, period=period).first()
+        if not exists:
+            db.session.add(TeacherUnavailability(teacher_id=teacher.id, day_of_week=day, period=period))
+    db.session.commit()
+
+    # デモ用の教員ログインアカウント（山田 太郎先生に紐付け）
+    yamada = Teacher.query.filter_by(name='山田 太郎').first()
+    teacher_user = User.query.filter_by(username='teacher').first()
+    if not teacher_user:
         teacher_user = User(
             username='teacher',
             role='teacher',
@@ -203,7 +254,10 @@ def _seed_demo_data():
         )
         teacher_user.set_password('teacher123')
         db.session.add(teacher_user)
-        db.session.commit()
+    else:
+        if yamada and teacher_user.teacher_id != yamada.id:
+            teacher_user.teacher_id = yamada.id
+    db.session.commit()
 
 
 if __name__ == '__main__':

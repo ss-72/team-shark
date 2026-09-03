@@ -52,7 +52,7 @@ class TestSystemIntegration(unittest.TestCase):
         self.assertEqual(res.status_code, 200)
         html = res.get_data(as_text=True)
         self.assertIn('Schedule Connect', html)
-        self.assertIn('学校時間割・教室管理システム', html)
+        self.assertIn('高度ITエンジニア科 時間割・教室管理システム', html)
         self.assertNotIn('🔰 デモ受入確認の流れ', html)
         self.assertNotIn('⚡ デモ用ワンクリック入力', html)
         self.assertNotIn('Scrum Board', html)
@@ -155,6 +155,92 @@ class TestSystemIntegration(unittest.TestCase):
         err_data = gen_res.get_json()
         self.assertIn('shortages', err_data)
         self.assertTrue(len(err_data['shortages']) > 0)
+
+    def test_touhoku_denshi_seed_and_generation(self):
+        from app import _seed_teachers, _seed_classrooms, _seed_time_slots, _seed_demo_data
+        from services.timetable_generator import generate_timetable
+
+        # クリーンなテスト用コンテキストでseedを実行
+        app = create_app({
+            'TESTING': True,
+            'SQLALCHEMY_DATABASE_URI': 'sqlite:///:memory:',
+            'SECRET_KEY': 'test-secret',
+        })
+        client = app.test_client()
+
+        with app.app_context():
+            db.create_all()
+            _seed_time_slots()
+            _seed_teachers()
+            _seed_classrooms()
+            _seed_demo_data()
+
+            # 1. 教員検証
+            teachers = Teacher.query.all()
+            self.assertEqual(len(teachers), 5)
+            for t in teachers:
+                self.assertEqual(t.department, '高度ITエンジニア科')
+                self.assertEqual(t.subject, '')
+            old_departments = [t.department for t in teachers if t.department in ['国語科', '体育科', '美術科', '情報科学科']]
+            self.assertEqual(len(old_departments), 0)
+
+            # 2. 科目検証
+            team_dev = Subject.query.filter_by(name='チーム開発技法').first()
+            self.assertIsNotNone(team_dev)
+            self.assertEqual(team_dev.required_periods_per_week, 6)
+
+            web_app = Subject.query.filter_by(name='WEBアプリケーション').first()
+            self.assertIsNotNone(web_app)
+            self.assertEqual(web_app.required_periods_per_week, 4)
+
+            # 3. 教室検証
+            classrooms = Classroom.query.all()
+            self.assertEqual(len(classrooms), 4)
+            classroom_names = [c.name for c in classrooms]
+            self.assertIn('PC実習室A', classroom_names)
+            self.assertIn('PC実習室B', classroom_names)
+            self.assertIn('システム実習室', classroom_names)
+            self.assertIn('講義室A', classroom_names)
+
+            # 4. TeacherSubject & TeacherUnavailability
+            self.assertTrue(TeacherSubject.query.count() > 0)
+            self.assertTrue(TeacherUnavailability.query.count() >= 3)
+
+            # 5. 再実行安全性 (Idempotent)
+            _seed_time_slots()
+            _seed_teachers()
+            _seed_classrooms()
+            _seed_demo_data()
+            self.assertEqual(Teacher.query.count(), 5)
+            self.assertEqual(Classroom.query.count(), 4)
+            self.assertEqual(Subject.query.count(), 8)
+
+            # 6. 自動生成成功確認
+            created = generate_timetable()
+            self.assertEqual(len(created), 26)  # 6+4+4+3+3+2+2+2 = 26
+            for s in Subject.query.all():
+                assigned_count = sum(1 for item in created if item.subject_id == s.id)
+                self.assertEqual(assigned_count, s.required_periods_per_week)
+
+        # 7. 教員ログインと教員名表示 (/api/auth/me)
+        login_res = client.post('/api/auth/login', json={
+            'username': 'teacher',
+            'password': 'teacher123',
+        })
+        self.assertEqual(login_res.status_code, 200)
+        login_data = login_res.get_json()
+        self.assertEqual(login_data['user']['role'], 'teacher')
+        self.assertEqual(login_data['user']['teacher_name'], '山田 太郎')
+
+        me_res = client.get('/api/auth/me')
+        self.assertEqual(me_res.status_code, 200)
+        self.assertEqual(me_res.get_json()['teacher_name'], '山田 太郎')
+
+        # 8. 自分の時間割取得
+        my_res = client.get('/api/my/timetable')
+        self.assertEqual(my_res.status_code, 200)
+        my_data = my_res.get_json()
+        self.assertTrue(len(my_data) > 0)
 
 
 if __name__ == '__main__':

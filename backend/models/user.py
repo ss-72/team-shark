@@ -19,10 +19,16 @@ class User(db.Model):
         return check_password_hash(self.password_hash, password)
 
     def to_dict(self):
-        return {
+        data = {
             'id': self.id,
             'username': self.username,
             'role': self.role,
             'teacher_id': self.teacher_id,
             'is_active': self.is_active,
         }
+        if self.teacher_id:
+            from models.teacher import Teacher
+            t = db.session.get(Teacher, self.teacher_id)
+            if t:
+                data['teacher_name'] = t.name
+        return data
