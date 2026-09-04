@@ -47,6 +47,7 @@ def get_my_timetable():
             'subject_id': t.subject_id,
             'subject': subj_name,
             'subject_name': subj_name,
+            'grade': t.subject.grade if t.subject else None,
             'classroom_id': t.classroom_id,
             'classroom': room_name,
             'classroom_name': room_name,

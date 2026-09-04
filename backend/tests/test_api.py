@@ -1,7 +1,12 @@
 import unittest
+from unittest.mock import patch
 
 from app import create_app
 from database import db
+from models.classroom import Classroom
+from models.subject import Subject
+from models.teacher import Teacher
+from models.time_slot import TimeSlot
 from models.user import User
 
 
@@ -47,7 +52,7 @@ class ApiTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 201)
         return response.get_json()
 
-    def _create_subject(self, name, required_periods_per_week=1):
+    def _create_subject(self, name, required_periods_per_week=2):
         response = self.client.post('/api/subjects', json={
             'name': name,
             'required_periods_per_week': required_periods_per_week,
@@ -65,6 +70,25 @@ class ApiTestCase(unittest.TestCase):
         self.assertEqual(self.client.get('/api/teachers').get_json(), [])
         self.assertEqual(self.client.get('/api/classrooms').get_json(), [])
         self.assertEqual(self.client.get('/api/time_slots').get_json(), [])
+
+    def test_normal_startup_has_no_business_seed_data(self):
+        with patch.dict('os.environ', {
+            'ADMIN_USERNAME': 'initial-admin',
+            'ADMIN_PASSWORD': 'initial-password',
+            'SEED_DEMO_DATA': '',
+        }):
+            empty_app = create_app({
+                'SQLALCHEMY_DATABASE_URI': 'sqlite://',
+                'SECRET_KEY': 'test-secret',
+            })
+
+        with empty_app.app_context():
+            self.assertEqual(Teacher.query.count(), 0)
+            self.assertEqual(Classroom.query.count(), 0)
+            self.assertEqual(TimeSlot.query.count(), 0)
+            self.assertEqual(Subject.query.count(), 0)
+            self.assertEqual(User.query.filter_by(role='admin').count(), 1)
+            db.drop_all()
 
     def test_teacher_crud(self):
         teacher = self._create_teacher('山田太郎')
@@ -167,6 +191,30 @@ class ApiTestCase(unittest.TestCase):
         response = self.client.delete(f"/api/timetables/{timetable['id']}")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(self.client.get('/api/timetables').get_json(), [])
+
+    def test_referenced_teacher_and_classroom_delete_returns_json_conflict(self):
+        teacher = self._create_teacher('参照あり教員')
+        classroom = self._create_classroom('参照あり教室')
+        subject = self._create_subject('参照あり科目')
+        self._assign_subject(teacher['id'], subject['id'])
+
+        response = self.client.post('/api/timetables', json={
+            'day_of_week': 'Monday',
+            'period': 1,
+            'teacher_id': teacher['id'],
+            'subject_id': subject['id'],
+            'classroom_id': classroom['id'],
+        })
+        self.assertEqual(response.status_code, 201)
+
+        for endpoint in (
+            f"/api/teachers/{teacher['id']}",
+            f"/api/classrooms/{classroom['id']}",
+        ):
+            response = self.client.delete(endpoint)
+            self.assertEqual(response.status_code, 409)
+            self.assertTrue(response.is_json)
+            self.assertIn('error', response.get_json())
 
 
 if __name__ == '__main__':

@@ -7,11 +7,18 @@
 
 チームB引き継ぎタスクにより、時間割の自動生成エンジン、HTTP 422不足理由返却、ロールバック保護、教員本人用時間割API/画面、および自動テスト基盤が**完成**した。
 
+## コマと時限の単位
+
+- `Subject.required_periods_per_week` は週あたりの**コマ数**を保持する。
+- **1時限 = 2コマ**として扱う。
+- 生成する `Timetable` の件数は `required_periods_per_week / 2` とする。
+- 必要コマ数は2以上の偶数とし、不足表示もコマ単位で返す。
+
 ## 実装内容
 
 - `POST /api/timetables/generate`
   - バックトラック探索による制約遵守（担当可能科目、出勤不可日時、教員・教室衝突防止、並行授業対応）
-  - 必要コマ数の完全一致保証（`assigned == required`）
+  - 必要コマ数の完全一致保証（`生成時限数 × 2 == required_periods_per_week`）
   - 生成不能時の HTTP 422 Unprocessable Entity および科目別不足理由（`shortages`）返却
   - メモリ上での候補検証、および置換保存時のトランザクション保護（生成不能・保存失敗時の直前時間割維持）
 - 時間割管理画面（`frontend/pages/timetables.html`, `frontend/js/timetables.js`, `frontend/js/timetable_view.js`）
@@ -30,7 +37,7 @@
 
 | 項目 | 状態 | 実装状況 |
 |---|---|---|
-| 生成成功 | ✅ 完成 | 科目ごとの必要コマ数と生成件数が厳密に一致する（`assigned == required`） |
+| 生成成功 | ✅ 完成 | 科目ごとの必要コマ数と生成時限数が厳密に一致する（`生成時限数 × 2 == required_periods_per_week`） |
 | 生成不能 | ✅ 完成 | HTTP 422 と科目別の不足理由（`subject_id`, `subject_name`, `required`, `assigned`, `missing`, `reason`）を返す |
 | 既存時間割 | ✅ 完成 | 生成不能・保存失敗時は直前の時間割が完全に保持される（トランザクションとrollback） |
 | 結果表示 | ✅ 完成 | 成功件数・科目別充足数、および生成不能時の不足理由を画面表示する |

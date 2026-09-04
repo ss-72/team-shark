@@ -118,7 +118,8 @@ class TestSystemIntegration(unittest.TestCase):
         gen_res = self.client.post('/api/timetables/generate')
         self.assertEqual(gen_res.status_code, 201)
         gen_data = gen_res.get_json()
-        self.assertEqual(gen_data['count'], 2)
+        self.assertEqual(gen_data['count'], 1)
+        self.assertEqual(gen_data['koma_count'], 2)
 
         # ログアウト
         logout_res = self.client.post('/api/auth/logout')
@@ -217,10 +218,10 @@ class TestSystemIntegration(unittest.TestCase):
 
             # 6. 自動生成成功確認
             created = generate_timetable()
-            self.assertEqual(len(created), 26)  # 6+4+4+3+3+2+2+2 = 26
+            self.assertEqual(len(created), 14)  # 28コマ ÷ 2コマ/時限
             for s in Subject.query.all():
                 assigned_count = sum(1 for item in created if item.subject_id == s.id)
-                self.assertEqual(assigned_count, s.required_periods_per_week)
+                self.assertEqual(assigned_count * 2, s.required_periods_per_week)
 
         # 7. 教員ログインと教員名表示 (/api/auth/me)
         login_res = client.post('/api/auth/login', json={

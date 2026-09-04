@@ -2,7 +2,7 @@ from collections import Counter
 
 from database import db
 from models.classroom import Classroom
-from models.subject import Subject
+from models.subject import KOMAS_PER_PERIOD, Subject
 from models.teacher import Teacher
 from models.teacher_subject import TeacherSubject
 from models.teacher_unavailability import TeacherUnavailability, VALID_DAYS
@@ -69,10 +69,15 @@ def _subject_requirements():
     }
 
 
-def build_candidates(subject_id, used_teacher_slots=None, used_classroom_slots=None):
-    used_teacher_slots = used_teacher_slots or set()
-    used_classroom_slots = used_classroom_slots or set()
+def build_candidates(subject_id, used_teacher_slots=None, used_classroom_slots=None, used_grade_slots=None):
+    used_teacher_slots = used_teacher_slots if used_teacher_slots is not None else set()
+    used_classroom_slots = used_classroom_slots if used_classroom_slots is not None else set()
+    used_grade_slots = used_grade_slots if used_grade_slots is not None else set()
     candidates = []
+
+    subject = db.session.get(Subject, subject_id)
+    if not subject:
+        return candidates
 
     eligible_teachers = [
         row.teacher_id for row in TeacherSubject.query.filter_by(subject_id=subject_id).all()
@@ -82,6 +87,8 @@ def build_candidates(subject_id, used_teacher_slots=None, used_classroom_slots=N
             continue
         for day_of_week in DAYS:
             for period in PERIODS:
+                if (day_of_week, period, subject.grade) in used_grade_slots:
+                    continue
                 if not is_teacher_free(teacher_id, day_of_week, period, used_teacher_slots):
                     continue
                 for classroom in Classroom.query.order_by(Classroom.id).all():
@@ -89,6 +96,7 @@ def build_candidates(subject_id, used_teacher_slots=None, used_classroom_slots=N
                         continue
                     candidates.append({
                         'subject_id': subject_id,
+                        'grade': subject.grade,
                         'teacher_id': teacher_id,
                         'classroom_id': classroom.id,
                         'day_of_week': day_of_week,
@@ -106,28 +114,40 @@ def build_candidates(subject_id, used_teacher_slots=None, used_classroom_slots=N
     )
 
 
-def try_assign(schedule, candidate, used_teacher_slots=None, used_classroom_slots=None):
-    used_teacher_slots = used_teacher_slots or set()
-    used_classroom_slots = used_classroom_slots or set()
+def try_assign(schedule, candidate, used_teacher_slots=None, used_classroom_slots=None, used_grade_slots=None):
+    used_teacher_slots = used_teacher_slots if used_teacher_slots is not None else set()
+    used_classroom_slots = used_classroom_slots if used_classroom_slots is not None else set()
+    used_grade_slots = used_grade_slots if used_grade_slots is not None else set()
     teacher_key = (candidate['day_of_week'], candidate['period'], candidate['teacher_id'])
     classroom_key = (candidate['day_of_week'], candidate['period'], candidate['classroom_id'])
+    grade_key = (candidate['day_of_week'], candidate['period'], candidate['grade'])
 
     if not teacher_can_teach(candidate['teacher_id'], candidate['subject_id']):
         return False
     if not is_teacher_available(candidate['teacher_id'], candidate['day_of_week'], candidate['period']):
         return False
-    if teacher_key in used_teacher_slots or classroom_key in used_classroom_slots:
+    if teacher_key in used_teacher_slots or classroom_key in used_classroom_slots or grade_key in used_grade_slots:
         return False
 
     schedule.append(candidate)
     used_teacher_slots.add(teacher_key)
     used_classroom_slots.add(classroom_key)
+    used_grade_slots.add(grade_key)
     return True
 
 
 def _candidate_shortages(requirements, schedule=None):
     schedule = schedule or []
     counts = Counter()
+    classroom_count = Classroom.query.count()
+    has_classrooms = classroom_count > 0
+    classroom_capacity_is_insufficient = (
+        sum(requirements.values())
+        > classroom_count * len(DAYS) * len(PERIODS) * KOMAS_PER_PERIOD
+    )
+    grade_requirements = Counter()
+    for subject in Subject.query.all():
+        grade_requirements[subject.grade] += requirements.get(subject.id, 0)
 
     for item in schedule:
         if isinstance(item, Timetable):
@@ -135,7 +155,7 @@ def _candidate_shortages(requirements, schedule=None):
         else:
             subject_id = item['subject_id']
 
-        counts[subject_id] += 1
+        counts[subject_id] += KOMAS_PER_PERIOD
 
     shortages = []
     for subject in Subject.query.order_by(Subject.id).all():
@@ -159,7 +179,13 @@ def _candidate_shortages(requirements, schedule=None):
         eligible_teachers = [
             row.teacher_id for row in TeacherSubject.query.filter_by(subject_id=subject.id).all()
         ]
-        if not eligible_teachers:
+        if not has_classrooms:
+            reason = 'no classroom registered'
+        elif classroom_capacity_is_insufficient:
+            reason = 'classroom capacity is insufficient'
+        elif grade_requirements[subject.grade] > len(DAYS) * len(PERIODS) * KOMAS_PER_PERIOD:
+            reason = 'grade time slots are insufficient'
+        elif not eligible_teachers:
             reason = 'no eligible teacher for subject'
         else:
             reason = 'available teacher/time slots are insufficient'
@@ -179,6 +205,7 @@ def validate_schedule(schedule):
     requirements = _subject_requirements()
     teacher_slots = set()
     classroom_slots = set()
+    grade_slots = set()
     counts = Counter()
 
     for item in schedule:
@@ -204,7 +231,7 @@ def validate_schedule(schedule):
                 'subject_name': subj_name,
                 'required': requirements.get(subject_id, 0),
                 'assigned': counts.get(subject_id, 0),
-                'missing': 1,
+                'missing': KOMAS_PER_PERIOD,
                 'reason': 'teacher is not assigned to the subject',
             }]
         if not is_teacher_available(teacher_id, day_of_week, period):
@@ -213,25 +240,27 @@ def validate_schedule(schedule):
                 'subject_name': subj_name,
                 'required': requirements.get(subject_id, 0),
                 'assigned': counts.get(subject_id, 0),
-                'missing': 1,
+                'missing': KOMAS_PER_PERIOD,
                 'reason': 'teacher is unavailable at that slot',
             }]
 
         teacher_key = (day_of_week, period, teacher_id)
         classroom_key = (day_of_week, period, classroom_id)
-        if teacher_key in teacher_slots or classroom_key in classroom_slots:
+        grade_key = (day_of_week, period, subj.grade if subj else None)
+        if teacher_key in teacher_slots or classroom_key in classroom_slots or grade_key in grade_slots:
             return False, [{
                 'subject_id': subject_id,
                 'subject_name': subj_name,
                 'required': requirements.get(subject_id, 0),
                 'assigned': counts.get(subject_id, 0),
-                'missing': 1,
+                'missing': KOMAS_PER_PERIOD,
                 'reason': 'teacher or classroom conflict detected',
             }]
 
         teacher_slots.add(teacher_key)
         classroom_slots.add(classroom_key)
-        counts[subject_id] += 1
+        grade_slots.add(grade_key)
+        counts[subject_id] += KOMAS_PER_PERIOD
 
     shortages = _candidate_shortages(requirements, schedule)
     if shortages:
@@ -244,6 +273,12 @@ def generate_candidate_schedule():
 
     if not requirements:
         return []
+
+    classroom_capacity = (
+        Classroom.query.count() * len(DAYS) * len(PERIODS) * KOMAS_PER_PERIOD
+    )
+    if sum(requirements.values()) > classroom_capacity:
+        raise TimetableGenerationError(_candidate_shortages(requirements))
 
     subjects = Subject.query.filter(
         Subject.required_periods_per_week > 0
@@ -268,19 +303,20 @@ def generate_candidate_schedule():
         )
     )
 
-    # 必要コマ数分だけタスクを作る
+    # 1時限は2コマなので、必要コマ数を時限数へ変換してタスクを作る
     task_queue = []
 
     for item in subject_candidates:
         subject = item['subject']
 
         task_queue.extend(
-            [subject.id] * subject.required_periods_per_week
+            [subject.id] * (subject.required_periods_per_week // KOMAS_PER_PERIOD)
         )
 
     chosen = []
     used_teacher_slots = set()
     used_classroom_slots = set()
+    used_grade_slots = set()
 
     def backtrack(index):
         if index == len(task_queue):
@@ -292,7 +328,8 @@ def generate_candidate_schedule():
         options = build_candidates(
             subject_id,
             used_teacher_slots,
-            used_classroom_slots
+            used_classroom_slots,
+            used_grade_slots,
         )
 
         day_load = Counter(item['day_of_week'] for item in chosen)
@@ -308,6 +345,7 @@ def generate_candidate_schedule():
         for option in options:
             candidate = {
                 'subject_id': option['subject_id'],
+                'grade': option['grade'],
                 'teacher_id': option['teacher_id'],
                 'classroom_id': option['classroom_id'],
                 'day_of_week': option['day_of_week'],
@@ -325,16 +363,22 @@ def generate_candidate_schedule():
                 candidate['period'],
                 candidate['classroom_id']
             )
+            grade_key = (
+                candidate['day_of_week'],
+                candidate['period'],
+                candidate['grade'],
+            )
 
             if teacher_key in used_teacher_slots:
                 continue
 
-            if classroom_key in used_classroom_slots:
+            if classroom_key in used_classroom_slots or grade_key in used_grade_slots:
                 continue
 
             chosen.append(candidate)
             used_teacher_slots.add(teacher_key)
             used_classroom_slots.add(classroom_key)
+            used_grade_slots.add(grade_key)
 
             success, shortages = backtrack(index + 1)
 
@@ -343,6 +387,7 @@ def generate_candidate_schedule():
 
             used_teacher_slots.remove(teacher_key)
             used_classroom_slots.remove(classroom_key)
+            used_grade_slots.remove(grade_key)
             chosen.pop()
 
         return False, _candidate_shortages(

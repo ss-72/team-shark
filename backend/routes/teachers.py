@@ -1,10 +1,13 @@
 from flask import Blueprint, jsonify, request
+from sqlalchemy.exc import IntegrityError
 
 from database import db
 from models.teacher import Teacher
 from models.subject import Subject
 from models.teacher_subject import TeacherSubject
 from models.teacher_unavailability import TeacherUnavailability, VALID_DAYS
+from models.timetable import Timetable
+from models.user import User
 from utils.auth import require_admin
 
 # 教員関連の API をまとめた Blueprint
@@ -86,8 +89,21 @@ def delete_teacher(teacher_id):
     if not teacher:
         return jsonify({"error": "該当する教員が見つかりません"}), 404
 
+    has_related_data = (
+        TeacherSubject.query.filter_by(teacher_id=teacher.id).first()
+        or TeacherUnavailability.query.filter_by(teacher_id=teacher.id).first()
+        or Timetable.query.filter_by(teacher_id=teacher.id).first()
+        or User.query.filter_by(teacher_id=teacher.id).first()
+    )
+    if has_related_data:
+        return jsonify({"error": "担当科目・出勤条件・時間割・ログインユーザーから参照されている教員は削除できません。先に関連データを削除してください。"}), 409
+
     db.session.delete(teacher)
-    db.session.commit()
+    try:
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        return jsonify({"error": "関連データから参照されている教員は削除できません。"}), 409
     return jsonify({"message": f"教員ID {teacher_id} を削除しました"}), 200
 
 

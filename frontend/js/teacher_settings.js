@@ -50,7 +50,7 @@ async function loadPage() {
         ]);
         document.getElementById('page-title').textContent = `${escapeHtml(teacher.name)} 先生の授業条件設定`;
         document.getElementById('subject-id').innerHTML = '<option value="">-- 科目を選択してください --</option>' +
-            subjects.map(s => `<option value="${s.id}">${escapeHtml(s.name)} (必要: 週${s.required_periods || 1}コマ)</option>`).join('');
+            subjects.map(s => `<option value="${s.id}">${escapeHtml(s.name)} (必要: 週${s.required_periods_per_week}コマ)</option>`).join('');
 
         await Promise.all([loadAssignments(), loadUnavailability()]);
     } catch (error) {

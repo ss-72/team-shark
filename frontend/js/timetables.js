@@ -66,7 +66,8 @@ async function updateSubjectOptions(teacherId, selectedSubjectId = null) {
                 assignments.map(a => {
                     const subId = a.subject_id;
                     const subName = a.subject ? a.subject.name : `科目ID:${subId}`;
-                    return `<option value="${subId}">${escapeHtml(subName)}</option>`;
+                    const grade = a.subject ? a.subject.grade : null;
+                    return `<option value="${subId}">${grade ? `${grade}年・` : ''}${escapeHtml(subName)}</option>`;
                 }).join('');
         } else {
             subjectSelect.disabled = true;
@@ -93,6 +94,13 @@ async function loadTimetables() {
     const table = document.getElementById('timetable-table');
     const noData = document.getElementById('no-data');
     const tbody = document.getElementById('timetable-list');
+    const headerRow = document.querySelector('#timetable-table thead tr');
+    if (headerRow && !headerRow.dataset.gradeHeader) {
+        const gradeHeader = document.createElement('th');
+        gradeHeader.textContent = '学年';
+        headerRow.insertBefore(gradeHeader, headerRow.children[1]);
+        headerRow.dataset.gradeHeader = 'true';
+    }
 
     loading.style.display = 'block';
     table.style.display = 'none';
@@ -113,6 +121,7 @@ async function loadTimetables() {
         tbody.innerHTML = timetables.map(t => `
             <tr>
                 <td>${t.id}</td>
+                <td>${t.grade ? `${t.grade}年` : '-'}</td>
                 <td>${dayLabels[t.day_of_week] || t.day_of_week}</td>
                 <td>${t.period}限</td>
                 <td>${escapeHtml(t.teacher_name || '教員ID:' + t.teacher_id)}</td>
@@ -268,11 +277,11 @@ async function generateTimetable() {
         }
 
         let successHtml = `<div class="success-box">`;
-        successHtml += `<div style="font-weight: 600; font-size: 15px;">時間割を自動生成しました（合計 ${res.count} コマ）</div>`;
+        successHtml += `<div style="font-weight: 600; font-size: 15px;">時間割を自動生成しました（合計 ${res.count} 時限／${res.koma_count} コマ）</div>`;
         if (Object.keys(subjectCounts).length > 0) {
             successHtml += `<ul style="margin: 10px 0 0 20px; font-size: 13px; line-height: 1.6;">`;
             for (const [sName, count] of Object.entries(subjectCounts)) {
-                successHtml += `<li><strong>${escapeHtml(sName)}</strong>: ${count}コマ割り当て</li>`;
+                successHtml += `<li><strong>${escapeHtml(sName)}</strong>: ${count}時限（${count * 2}コマ）割り当て</li>`;
             }
             successHtml += `</ul>`;
         }
@@ -293,7 +302,13 @@ async function generateTimetable() {
             error.payload.shortages.forEach(s => {
                 const sName = s.subject_name || `科目ID:${s.subject_id}`;
                 let reasonText = s.reason;
-                if (s.reason === 'no eligible teacher for subject') {
+                if (s.reason === 'no classroom registered') {
+                    reasonText = '教室が登録されていません。先に教室を登録してください';
+                } else if (s.reason === 'classroom capacity is insufficient') {
+                    reasonText = '必要コマ数に対して教室の空き枠が不足しています';
+                } else if (s.reason === 'grade time slots are insufficient') {
+                    reasonText = 'この学年の授業数が、週内に配置できる時限数を超えています';
+                } else if (s.reason === 'no eligible teacher for subject') {
                     reasonText = '担当可能な教員が登録されていません';
                 } else if (s.reason === 'available teacher/time slots are insufficient') {
                     reasonText = '教員の出勤条件または空き時限が不足しています';
@@ -304,7 +319,7 @@ async function generateTimetable() {
                     <div style="background: #ffffff; padding: 10px 14px; border-radius: 6px; border: 1px solid #fecaca; border-left: 4px solid #dc2626;">
                         <div style="font-weight: 600; font-size: 14px; color: #1e293b;">${escapeHtml(sName)}</div>
                         <div style="font-size: 13px; color: #475569; margin-top: 4px;">
-                            必要コマ数: <strong>${s.required}</strong> / 割当可能: <strong>${s.assigned}</strong> / 不足: <strong style="color:#dc2626;">${s.missing}</strong>
+                            必要コマ数: <strong>${s.required}</strong> / 仮割当: <strong>${s.assigned}</strong> / 不足: <strong style="color:#dc2626;">${s.missing}</strong>
                         </div>
                         <div style="font-size: 12px; color: #b91c1c; margin-top: 4px;">
                             原因: ${escapeHtml(reasonText)}

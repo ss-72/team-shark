@@ -46,7 +46,7 @@ class A2ApiTestCase(unittest.TestCase):
         return self.client.post(f'/api/teachers/{teacher_id}/subjects', json={'subject_id': subject_id})
 
     def test_subject_crud_and_validation(self):
-        subject = self._subject('数学', 3)
+        subject = self._subject('数学', 2)
         self.assertEqual(self.client.get('/api/subjects').get_json(), [subject])
         self.assertEqual(self.client.get(f"/api/subjects/{subject['id']}").get_json(), subject)
 
@@ -60,10 +60,13 @@ class A2ApiTestCase(unittest.TestCase):
             'name': ' ', 'required_periods_per_week': 1,
         }).status_code, 400)
         self.assertEqual(self.client.post('/api/subjects', json={
-            'name': '応用数学', 'required_periods_per_week': 1,
+            'name': '応用数学', 'required_periods_per_week': 2,
         }).status_code, 409)
         self.assertEqual(self.client.post('/api/subjects', json={
             'name': '英語', 'required_periods_per_week': 0,
+        }).status_code, 400)
+        self.assertEqual(self.client.post('/api/subjects', json={
+            'name': '奇数コマ科目', 'required_periods_per_week': 3,
         }).status_code, 400)
         self.assertEqual(self.client.delete(f"/api/subjects/{subject['id']}").status_code, 200)
 

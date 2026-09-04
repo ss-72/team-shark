@@ -1,4 +1,5 @@
 from database import db
+from models.subject import Subject
 from sqlalchemy import UniqueConstraint
 
 class Timetable(db.Model):
@@ -34,11 +35,12 @@ class Timetable(db.Model):
             "is_online": self.is_online,
             "teacher_name": self.teacher.name if self.teacher else None,
             "subject_name": self.subject.name if self.subject else None,
+            "grade": self.subject.grade if self.subject else None,
             "classroom_name": self.classroom.name if self.classroom else None
         }
 
     @classmethod
-    def find_conflicts(cls, day_of_week, period, teacher_id=None, classroom_id=None, exclude_id=None):
+    def find_conflicts(cls, day_of_week, period, teacher_id=None, classroom_id=None, grade=None, exclude_id=None):
         """
         指定したスロットで教員または教室の衝突があるか確認する。
         exclude_id を指定するとそのレコードは検索から除外する（更新時に自身を無視するため）。
@@ -59,4 +61,15 @@ class Timetable(db.Model):
                 q = q.filter(cls.id != exclude_id)
             classroom_conflict = q.first()
 
-        return teacher_conflict, classroom_conflict
+        grade_conflict = None
+        if grade is not None:
+            q = cls.query.join(Subject, cls.subject_id == Subject.id).filter(
+                cls.day_of_week == day_of_week,
+                cls.period == period,
+                Subject.grade == grade,
+            )
+            if exclude_id is not None:
+                q = q.filter(cls.id != exclude_id)
+            grade_conflict = q.first()
+
+        return teacher_conflict, classroom_conflict, grade_conflict

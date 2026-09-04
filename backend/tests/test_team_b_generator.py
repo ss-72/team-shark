@@ -64,13 +64,13 @@ class TeamBRequirementsTestCase(unittest.TestCase):
             sess['user_id'] = user.id
 
     def test_requirement_A_exact_periods_count(self):
-        """A. X=3、Y=2なら生成結果もX=3、Y=2 (assigned == required)"""
+        """A. X=6コマ、Y=4コマならX=3時限、Y=2時限になる"""
         teacher_x = self._create_teacher('教員X')
         teacher_y = self._create_teacher('教員Y')
         classroom = self._create_classroom('101')
 
-        subj_x = self._create_subject('科目X', 3)
-        subj_y = self._create_subject('科目Y', 2)
+        subj_x = self._create_subject('科目X', 6)
+        subj_y = self._create_subject('科目Y', 4)
 
         db.session.add_all([
             TeacherSubject(teacher_id=teacher_x.id, subject_id=subj_x.id),
@@ -83,8 +83,8 @@ class TeamBRequirementsTestCase(unittest.TestCase):
         for item in schedule:
             counts[item['subject_id']] = counts.get(item['subject_id'], 0) + 1
 
-        self.assertEqual(counts.get(subj_x.id), 3)
-        self.assertEqual(counts.get(subj_y.id), 2)
+        self.assertEqual(counts.get(subj_x.id) * 2, 6)
+        self.assertEqual(counts.get(subj_y.id) * 2, 4)
         self.assertEqual(len(schedule), 5)
 
     def test_requirement_B_only_assigned_teachers(self):
@@ -93,7 +93,7 @@ class TeamBRequirementsTestCase(unittest.TestCase):
         teacher_b = self._create_teacher('教員B')
         classroom = self._create_classroom('101')
 
-        subject = self._create_subject('科目A', 2)
+        subject = self._create_subject('科目A', 4)
 
         # teacher_a だけが subject を担当可能
         db.session.add(TeacherSubject(teacher_id=teacher_a.id, subject_id=subject.id))
@@ -109,7 +109,7 @@ class TeamBRequirementsTestCase(unittest.TestCase):
         """C. Tuesday / NULL を守る, D. Thursday / 3 を守る"""
         teacher = self._create_teacher('制約教員')
         classroom = self._create_classroom('101')
-        subject = self._create_subject('必須科目', 5)
+        subject = self._create_subject('必須科目', 10)
 
         db.session.add(TeacherSubject(teacher_id=teacher.id, subject_id=subject.id))
         # 火曜終日NG
@@ -166,8 +166,8 @@ class TeamBRequirementsTestCase(unittest.TestCase):
 
         # 5日×5限 = 25コマ。教員1は月曜1限のみ可能、教員2も月曜1限のみ可能に設定
         # 異なる教室で並行配置できるはず
-        subj_1 = self._create_subject('並行1', 1)
-        subj_2 = self._create_subject('並行2', 1)
+        subj_1 = self._create_subject('並行1', 2)
+        subj_2 = self._create_subject('並行2', 2)
 
         db.session.add_all([
             TeacherSubject(teacher_id=teacher_1.id, subject_id=subj_1.id),
@@ -198,11 +198,11 @@ class TeamBRequirementsTestCase(unittest.TestCase):
 
         teacher = self._create_teacher('担当教員')
         classroom = self._create_classroom('201')
-        subject = self._create_subject('配置不能科目', 1)
+        subject = self._create_subject('配置不能科目', 2)
 
         # 担当可能教員をあえて登録しない -> 生成不能
         # 既存の時間割を用意
-        existing_subject = self._create_subject('既存科目', 1)
+        existing_subject = self._create_subject('既存科目', 2)
         db.session.add(TeacherSubject(teacher_id=teacher.id, subject_id=existing_subject.id))
         existing_tt = Timetable(
             teacher_id=teacher.id,
@@ -224,9 +224,9 @@ class TeamBRequirementsTestCase(unittest.TestCase):
         shortages = payload['shortages']
         self.assertTrue(any(s['subject_id'] == subject.id for s in shortages))
         shortage = next(s for s in shortages if s['subject_id'] == subject.id)
-        self.assertEqual(shortage['required'], 1)
+        self.assertEqual(shortage['required'], 2)
         self.assertEqual(shortage['assigned'], 0)
-        self.assertEqual(shortage['missing'], 1)
+        self.assertEqual(shortage['missing'], 2)
         self.assertIn('reason', shortage)
         self.assertEqual(shortage['subject_name'], '配置不能科目')
 
@@ -235,11 +235,42 @@ class TeamBRequirementsTestCase(unittest.TestCase):
         self.assertEqual(len(timetables), 1)
         self.assertEqual(timetables[0].subject_id, existing_subject.id)
 
+    def test_generation_reports_missing_classroom(self):
+        teacher = self._create_teacher('教員')
+        subject = self._create_subject('教室不足科目', 2)
+        db.session.add(TeacherSubject(teacher_id=teacher.id, subject_id=subject.id))
+        db.session.commit()
+
+        with self.assertRaises(TimetableGenerationError) as raised:
+            generate_candidate_schedule()
+
+        shortage = next(
+            item for item in raised.exception.shortages
+            if item['subject_id'] == subject.id
+        )
+        self.assertEqual(shortage['reason'], 'no classroom registered')
+
+    def test_generation_reports_insufficient_classroom_capacity(self):
+        teacher = self._create_teacher('教員')
+        self._create_classroom('教室')
+        subject = self._create_subject('教室枠不足科目', 52)
+        db.session.add(TeacherSubject(teacher_id=teacher.id, subject_id=subject.id))
+        db.session.commit()
+
+        with self.assertRaises(TimetableGenerationError) as raised:
+            generate_candidate_schedule()
+
+        shortage = next(
+            item for item in raised.exception.shortages
+            if item['subject_id'] == subject.id
+        )
+        self.assertEqual(shortage['reason'], 'classroom capacity is insufficient')
+
     def test_requirement_J_save_failure_preserves_existing(self):
         """J. DB保存失敗後も既存Timetable保持 (ロールバック確認)"""
         teacher = self._create_teacher('教員')
         classroom = self._create_classroom('101')
-        subject = self._create_subject('科目', 1)
+        subject = self._create_subject('科目', 2)
         db.session.add(TeacherSubject(teacher_id=teacher.id, subject_id=subject.id))
 
         existing = Timetable(
@@ -272,7 +303,7 @@ class TeamBRequirementsTestCase(unittest.TestCase):
         classroom_2 = self._create_classroom('102')
 
         subj_a = self._create_subject('Python基礎', 2)
-        subj_b = self._create_subject('ネットワーク', 1)
+        subj_b = self._create_subject('ネットワーク', 2)
 
         db.session.add_all([
             TeacherSubject(teacher_id=teacher_a.id, subject_id=subj_a.id),
@@ -342,7 +373,7 @@ class TeamBRequirementsTestCase(unittest.TestCase):
         _seed_demo_data()
 
         schedule = generate_candidate_schedule()
-        self.assertEqual(len(schedule), 26)
+        self.assertEqual(len(schedule), 14)
 
         # 1. Monday〜Friday の5日間すべてが使われていること
         used_days = {item['day_of_week'] for item in schedule}
@@ -354,7 +385,7 @@ class TeamBRequirementsTestCase(unittest.TestCase):
         for d in expected_days:
             self.assertGreaterEqual(day_counts[d], 1, f'{d} に最低1コマ以上配置されること')
 
-        # 26コマの5日間配置において max - min <= 1 (理想: 6, 5, 5, 5, 5)
+        # 14時限の5日間配置において max - min <= 1 (理想: 3, 3, 3, 3, 2)
         diff = max(day_counts.values()) - min(day_counts.values())
         self.assertLessEqual(diff, 1, f'曜日間のコマ数差が1以内であること (実際: {day_counts})')
 

@@ -30,6 +30,9 @@ async function showWeekCalendar(filter, filterId, filterName) {
         if (filter === 'teacher' && filterId) {
             filtered = timetables.filter(t => t.teacher_id === filterId);
             label.textContent = `表示中: 教員 ${escapeHtml(filterName || filterId)}`;
+        } else if (filter === 'grade' && filterId) {
+            filtered = timetables.filter(t => t.grade === Number(filterId));
+            label.textContent = `${filterId}年の時間割`;
         } else if (filter === 'classroom' && filterId) {
             filtered = timetables.filter(t => t.classroom_id === filterId);
             label.textContent = `表示中: 教室 ${escapeHtml(filterName || filterId)}`;
@@ -79,7 +82,7 @@ async function showWeekCalendar(filter, filterId, filterName) {
         calendar.innerHTML = html;
 
         // アクティブなフィルタボタンのスタイルを更新
-        const activeFilter = (filter === 'teacher' || filter === 'classroom') ? filter : 'all';
+        const activeFilter = (filter === 'teacher' || filter === 'classroom' || filter === 'grade') ? filter : 'all';
         document.querySelectorAll('.btn-filter').forEach(btn => {
             btn.classList.remove('active');
         });
@@ -125,6 +128,34 @@ async function showFilterModal(type) {
 }
 
 // カレンダー初期表示
+function showGradeFilterModal() {
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <h3>学年を選択</h3>
+            <ul class="filter-list">
+                ${[2, 3, 4].map(grade => `<li onclick="showWeekCalendar('grade', ${grade}, '${grade}年')" class="filter-item">${grade}年</li>`).join('')}
+            </ul>
+            <button onclick="this.closest('.modal-overlay').remove()" class="btn-close">閉じる</button>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    modal.addEventListener('click', (event) => {
+        if (event.target === modal) modal.remove();
+    });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+    const controls = document.getElementById('calendar-controls');
+    if (controls && !controls.querySelector('[data-filter="grade"]')) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.dataset.filter = 'grade';
+        button.className = 'btn-filter';
+        button.textContent = '学年別表示';
+        button.addEventListener('click', showGradeFilterModal);
+        controls.insertBefore(button, document.getElementById('calendar-filter-label'));
+    }
     showWeekCalendar('all');
 });

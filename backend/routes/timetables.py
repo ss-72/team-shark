@@ -4,7 +4,7 @@ from database import db
 from models.timetable import Timetable
 from models.teacher import Teacher
 from models.classroom import Classroom
-from models.subject import Subject
+from models.subject import KOMAS_PER_PERIOD, Subject
 from models.teacher_subject import TeacherSubject
 from models.teacher_unavailability import TeacherUnavailability, VALID_DAYS
 from sqlalchemy.exc import IntegrityError
@@ -34,7 +34,8 @@ def _validated_manual_timetable(data, exclude_id=None):
         return None, jsonify({'error': 'period は1から5で指定してください'}), 400
     if not db.session.get(Teacher, teacher_id) or not db.session.get(Classroom, classroom_id):
         return None, jsonify({'error': '指定された教員IDまたは教室IDが存在しません'}), 400
-    if not db.session.get(Subject, subject_id):
+    subject = db.session.get(Subject, subject_id)
+    if not subject:
         return None, jsonify({'error': '指定された科目IDが存在しません'}), 400
     if not TeacherSubject.query.filter_by(teacher_id=teacher_id, subject_id=subject_id).first():
         return None, jsonify({'error': '指定された教員はこの科目を担当できません'}), 400
@@ -42,13 +43,16 @@ def _validated_manual_timetable(data, exclude_id=None):
             TeacherUnavailability.query.filter_by(teacher_id=teacher_id, day_of_week=day_of_week, period=period).first():
         return None, jsonify({'error': '指定された教員はその日時に出勤できません'}), 400
 
-    teacher_conflict, classroom_conflict = Timetable.find_conflicts(
-        day_of_week, period, teacher_id=teacher_id, classroom_id=classroom_id, exclude_id=exclude_id
+    teacher_conflict, classroom_conflict, grade_conflict = Timetable.find_conflicts(
+        day_of_week, period, teacher_id=teacher_id, classroom_id=classroom_id,
+        grade=subject.grade, exclude_id=exclude_id
     )
     if teacher_conflict:
         return None, jsonify({'error': '指定した教員はその日時に既に割当があります'}), 409
     if classroom_conflict:
         return None, jsonify({'error': '指定した教室はその日時に既に使用されています'}), 409
+    if grade_conflict:
+        return None, jsonify({'error': 'A class for this grade already exists at that time'}), 409
     return (day_of_week, period, teacher_id, subject_id, classroom_id), None, None
 
 
@@ -95,6 +99,7 @@ def auto_generate():
         return jsonify({
             "message": "時間割を自動生成しました",
             "count": len(created),
+            "koma_count": len(created) * KOMAS_PER_PERIOD,
             "timetables": [t.to_dict() for t in created]
         }), 201
     except TimetableGenerationError as e:

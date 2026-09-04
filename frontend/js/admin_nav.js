@@ -9,10 +9,10 @@
             <div class="header-brand-nav">
                 <a href="admin_dashboard.html" class="brand-logo">
                     <span class="brand-name">Schedule Connect</span>
-                    <span class="system-tag">管理システム</span>
+                    <span class="system-tag">デモ</span>
                 </a>
                 <nav class="nav-links">
-                    <a href="admin_dashboard.html" data-nav="dashboard" class="${activeKey === 'dashboard' ? 'active' : ''}">ダッシュボード</a>
+                    <a href="admin_dashboard.html" data-nav="dashboard" class="${activeKey === 'dashboard' ? 'active' : ''}">ホーム</a>
                     <a href="timetables.html" data-nav="timetables" class="${activeKey === 'timetables' ? 'active' : ''}">時間割</a>
                     <a href="subjects.html" data-nav="subjects" class="${activeKey === 'subjects' ? 'active' : ''}">科目</a>
                     <a href="teachers.html" data-nav="teachers" class="${activeKey === 'teachers' ? 'active' : ''}">教員</a>

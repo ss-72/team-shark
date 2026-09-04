@@ -3,6 +3,7 @@ from sqlalchemy.exc import IntegrityError
 
 from database import db
 from models.classroom import Classroom
+from models.timetable import Timetable
 
 # 教室関連の API をまとめた Blueprint
 classrooms_bp = Blueprint('classrooms_bp', __name__)
@@ -92,8 +93,15 @@ def delete_classroom(classroom_id):
     if not classroom:
         return jsonify({"error": "該当する教室が見つかりません"}), 404
 
+    if Timetable.query.filter_by(classroom_id=classroom.id).first():
+        return jsonify({"error": "時間割で使用されている教室は削除できません。先に関連する時間割を削除してください。"}), 409
+
     db.session.delete(classroom)
-    db.session.commit()
+    try:
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        return jsonify({"error": "関連データから参照されている教室は削除できません。"}), 409
     return jsonify({"message": f"教室ID {classroom_id} を削除しました"}), 200
 
 

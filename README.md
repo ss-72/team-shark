@@ -104,7 +104,7 @@ git push origin feature/new-feature
 
 ## テストと開発用seed
 
-開発起動時は、教員・教室・時間枠のサンプルデータを自動作成します。一方、`TESTING=True` で `create_app()` を呼び出すテストでは開発用seedを投入しません。各テストで必要なデータを明示的に作成してください。
+通常起動時は、ログインに必要な管理者アカウント以外のデータを作成しません。サンプルデータが必要な場合だけ `SEED_DEMO_DATA=true` を設定して起動してください。`TESTING=True` で `create_app()` を呼び出すテストではseedを投入せず、各テストが必要なデータを明示的に作成します。
 
 テストは次のコマンドで実行します。
 
@@ -160,7 +160,7 @@ TeacherUnavailability.period
 Timetable.subject_id
 ```
 
-- 必要コマ数の正は `Subject.required_periods_per_week` です。`Teacher.required_periods` は作成しません。
+- 必要コマ数の正は `Subject.required_periods_per_week` です。値はコマ数で、`1時限 = 2コマ` として時間割を生成します。そのため必要コマ数は2以上の偶数にします。`Teacher.required_periods` は作成しません。
 - `TeacherSubject` は教員が担当可能な科目を表します。
 - `TeacherUnavailability.period` が `NULL` の場合は終日不可、数値の場合はその時限のみ不可です。
 - 曜日は `Monday`、`Tuesday`、`Wednesday`、`Thursday`、`Friday` を使用します。

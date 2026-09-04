@@ -7,6 +7,7 @@ from flask_cors import CORS
 from dotenv import load_dotenv
 from database import db
 from flask import session
+from sqlalchemy import inspect, text
 
 from models.teacher import Teacher
 from models.classroom import Classroom
@@ -97,16 +98,34 @@ def create_app(config_override=None):
 
     with app.app_context():
         db.create_all()
-        # Tests own their fixtures so development seed data cannot change their
-        # assumptions or collide with records created by an individual test.
+        _migrate_subject_grade_column()
+        # Keep normal startup empty except for the administrator required to
+        # sign in. Sample data is available only when explicitly enabled.
         if not app.config.get('TESTING'):
-            _seed_time_slots()
-            _seed_teachers()
-            _seed_classrooms()
             _seed_admin_user()
-            _seed_demo_data()
+            seed_demo_data = app.config.get('SEED_DEMO_DATA')
+            if seed_demo_data is None:
+                seed_demo_data = os.getenv('SEED_DEMO_DATA', '').lower() in ('1', 'true', 'yes')
+            if seed_demo_data:
+                _seed_time_slots()
+                _seed_teachers()
+                _seed_classrooms()
+                _seed_demo_data()
 
     return app
+
+
+def _migrate_subject_grade_column():
+    """Add the grade field for installations created before cohort scheduling."""
+    inspector = inspect(db.engine)
+    if 'subjects' not in inspector.get_table_names():
+        return
+    columns = {column['name'] for column in inspector.get_columns('subjects')}
+    if 'grade' not in columns:
+        db.session.execute(text(
+            'ALTER TABLE subjects ADD COLUMN grade INTEGER NOT NULL DEFAULT 2'
+        ))
+        db.session.commit()
 
 
 def _seed_teachers():
@@ -186,8 +205,8 @@ def _seed_demo_data():
         {'name': 'チーム開発技法', 'required_periods_per_week': 6},
         {'name': 'WEBアプリケーション', 'required_periods_per_week': 4},
         {'name': 'プログラミング言語Ⅲ', 'required_periods_per_week': 4},
-        {'name': 'クラウド技術基礎', 'required_periods_per_week': 3},
-        {'name': '情報セキュリティⅡ', 'required_periods_per_week': 3},
+        {'name': 'クラウド技術基礎', 'required_periods_per_week': 4},
+        {'name': '情報セキュリティⅡ', 'required_periods_per_week': 4},
         {'name': 'データベース設計', 'required_periods_per_week': 2},
         {'name': 'サーバ構築', 'required_periods_per_week': 2},
         {'name': 'システム開発演習', 'required_periods_per_week': 2},

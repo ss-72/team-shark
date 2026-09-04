@@ -1,5 +1,6 @@
 from datetime import datetime
 from flask import Blueprint, jsonify, request
+from sqlalchemy.exc import IntegrityError
 
 from database import db
 from models.time_slot import TimeSlot
@@ -117,7 +118,11 @@ def delete_time_slot(time_slot_id):
         return jsonify({"error": "該当する時間枠が見つかりません"}), 404
 
     db.session.delete(time_slot)
-    db.session.commit()
+    try:
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        return jsonify({"error": "関連データから参照されている時間枠は削除できません。"}), 409
     return jsonify({"message": f"時間枠ID {time_slot_id} を削除しました"}), 200
 
 

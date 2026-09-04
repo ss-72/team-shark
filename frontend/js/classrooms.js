@@ -7,7 +7,7 @@ async function fetchAPI(endpoint, options = {}) {
             credentials: 'include',
             ...options,
         });
-        const data = await response.json();
+        const data = await response.json().catch(() => ({}));
         if (!response.ok) {
             throw new Error(data.error || `HTTP ${response.status}`);
         }

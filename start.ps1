@@ -1,38 +1,26 @@
 $ErrorActionPreference = "Stop"
 
-Write-Host "===================================================" -ForegroundColor Cyan
-Write-Host "  時間割・教室自動割り当てシステム 起動スクリプト" -ForegroundColor Cyan
-Write-Host "===================================================" -ForegroundColor Cyan
+$backendPath = Join-Path $PSScriptRoot "backend"
+Set-Location -Path $backendPath
 
-Set-Location -Path "$PSScriptRoot\backend"
-
-if (-not (Test-Path ".env")) {
-    Write-Host "[INFO] backend/.env が見つからないため初期設定ファイルを作成します..." -ForegroundColor Yellow
-    @"
-# Flask設定
+if (-not (Test-Path -LiteralPath ".env")) {
+    Write-Host "[INFO] Creating backend/.env with the default SQLite settings." -ForegroundColor Yellow
+    @'
 SECRET_KEY=dev-secret-key-12345
 ADMIN_USERNAME=admin
 ADMIN_PASSWORD=adminpassword123
-
-# Database (SQLite)
 DATABASE_URL=sqlite:///school_db.sqlite
-# MySQLを使用する場合は上記をコメントアウトし以下を設定してください
-# MYSQL_HOST=localhost
-# MYSQL_PORT=3306
-# MYSQL_USER=root
-# MYSQL_PASSWORD=root
-# MYSQL_DATABASE=scrum_db
-"@ | Out-File -FilePath ".env" -Encoding utf8
-    Write-Host "[INFO] backend/.env を作成しました（デフォルト: SQLite）。" -ForegroundColor Green
+'@ | Set-Content -LiteralPath ".env" -Encoding utf8
 }
 
-Write-Host "[INFO] アプリケーションを起動しています..." -ForegroundColor Green
+Write-Host "[INFO] Starting the application..." -ForegroundColor Green
 Write-Host "[INFO] URL: http://localhost:5000" -ForegroundColor Green
-Write-Host "[INFO] 管理者アカウント: admin / adminpassword123" -ForegroundColor Green
-Write-Host "---------------------------------------------------" -ForegroundColor Cyan
+Write-Host "[INFO] Login: admin / adminpassword123" -ForegroundColor Green
 
-# ブラウザを開く
-Start-Process "http://localhost:5000"
-
-# Python起動
-py -3.13 app.py
+$venvPython = Join-Path $PSScriptRoot ".venv\Scripts\python.exe"
+if (Test-Path -LiteralPath $venvPython) {
+    & $venvPython "app.py"
+} else {
+    Write-Host "[WARN] .venv was not found. Using the Python launcher." -ForegroundColor Yellow
+    & py -3.13 "app.py"
+}

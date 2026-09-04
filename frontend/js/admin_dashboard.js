@@ -27,7 +27,7 @@
         const elTeachers = document.getElementById('stat-teachers');
         const elClassrooms = document.getElementById('stat-classrooms');
 
-        if (elTimetables) elTimetables.textContent = `${timetablesCount} 件`;
+        if (elTimetables) elTimetables.textContent = `${timetablesCount} 時限`;
         if (elSubjects) elSubjects.textContent = `${subjectsCount} 件`;
         if (elTeachers) elTeachers.textContent = `${teachersCount} 名`;
         if (elClassrooms) elClassrooms.textContent = `${classroomsCount} 室`;
